@@ -2,10 +2,10 @@
 
 function getSettings() {
   return {
-    homeLabel: localStorage.getItem("skippy_homeLabel") || "South West UK",
-    apiBase: localStorage.getItem("skippy_apiBase") || ""
+    homeLabel: localStorage.getItem("skippy_homeLabel") || "South West UK"
   };
 }
+
 
 function pillClass(score) {
   if (score >= 80) return "pill excellent";
@@ -75,14 +75,10 @@ function renderWeek(data) {
 
 async function main() {
   var s = getSettings();
-  if (!s.apiBase) {
-    document.getElementById("footerNote").textContent =
-      "Open Settings and paste your Cloudflare Worker URL to load live data.";
-    return;
-  }
+  var apiBase = SKIPPY_API_BASE;
 
   try {
-    var data = await fetchWeek(s.apiBase);
+    var data = await fetchWeek(apiBase);
     renderWeek(data);
   } catch (e) {
     document.getElementById("footerNote").textContent = "Error loading data: " + e.message;
