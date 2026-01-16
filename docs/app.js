@@ -2,8 +2,7 @@
 
 function getSettings() {
   return {
-    homeLabel: localStorage.getItem("skippy_homeLabel") || "South West UK",
-    apiBase: localStorage.getItem("skippy_apiBase") || ""
+    homeLabel: localStorage.getItem("skippy_homeLabel") || "South West UK"
   };
 }
 
@@ -14,107 +13,105 @@ function pillClass(score) {
   return "pill poor";
 }
 
-function getDateParam() {
-  var p = new URLSearchParams(window.location.search);
-  return p.get("date") || "";
+function setText(id, text) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.textContent = text;
 }
 
-async function fetchDay(apiBase, dayIso) {
-  var base = apiBase.replace(/\/+$/, "");
-  var url = base + "/api/day?day_iso=" + encodeURIComponent(dayIso);
+function setHtml(id, html) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  el.innerHTML = html;
+}
+
+function setFooterNote(msg) {
+  setText("footerNote", msg || "");
+}
+
+async function fetchWeek(apiBase) {
+  var url = apiBase.replace(/\/+$/, "") + "/api/week";
   var resp = await fetch(url, { method: "GET" });
   if (!resp.ok) throw new Error("API error: " + resp.status);
   return await resp.json();
 }
 
-function tileHtml(label, main, sub) {
-  return ""
-    + '<div class="tile">'
-    + '  <div class="muted small">' + label + "</div>"
-    + '  <div style="font-weight:800;">' + main + "</div>"
-    + '  <div class="muted small">' + sub + "</div>"
-    + "</div>";
-}
+function renderWeek(data) {
+  setText("location", data.location || "South West UK");
 
-function renderDay(data) {
-  document.getElementById("location").textContent = data.location || "South West UK";
-  document.getElementById("title").textContent = data.title || data.date;
+  var best = data.best_day || null;
+  if (best) {
+    setHtml(
+      "bestCard",
+      ""
+        + '<div class="muted small">Best day this week</div>'
+        + '<div class="spacer"></div>'
+        + '<div class="row">'
+        + '  <div>'
+        + '    <div style="font-weight:800; font-size:18px;">' + best.dow + " " + best.label + "</div>"
+        + '    <div class="muted small">Best window: ' + best.best_time.start + " - " + best.best_time.end + "</div>"
+        + "  </div>"
+        + '  <div class="' + pillClass(best.score) + '" style="font-size:16px;">' + best.score + "</div>"
+        + "</div>"
+    );
+  } else {
+    setHtml("bestCard", '<div class="muted small">No data</div>');
+  }
 
-  var summary = document.getElementById("summary");
-  summary.innerHTML = ""
-    + '<div class="row">'
-    + '  <div>'
-    + '    <div class="big">' + data.summary.temp_c + "&deg;C</div>"
-    + '    <div class="muted">' + data.summary.condition + "</div>"
-    + "  </div>"
-    + '  <div style="text-align:right;">'
-    + '    <div class="muted small">Boating Score</div>'
-    + '    <div class="' + pillClass(data.summary.score) + '" style="font-size:16px;">'
-    + data.summary.score
-    + "</div>"
-    + "  </div>"
-    + "</div>";
+  var daysEl = document.getElementById("days");
+  if (!daysEl) return;
 
-  var tiles = document.getElementById("tiles");
-  tiles.innerHTML = ""
-    + tileHtml("Wind", data.tiles.wind_kts + " kts", "Gusts " + data.tiles.gust_kts + " kts " + data.tiles.wind_dir)
-    + tileHtml("Waves", data.tiles.wave_m + " m", "Period " + data.tiles.period_s + " s")
-    + tileHtml("Visibility", data.tiles.visibility_km + " km", "Precip " + data.tiles.precip_mm + " mm")
-    + tileHtml("Daylight", "Sunrise " + data.tiles.sunrise, "Sunset " + data.tiles.sunset);
+  daysEl.innerHTML = "";
 
-  var tides = document.getElementById("tides");
-  tides.innerHTML = "";
-  data.tides.forEach(function(t) {
-    var row = document.createElement("div");
-    row.className = "row";
-    row.innerHTML = '<div><b>' + t.type + " Tide</b> <span class=\"muted small\">" + t.time + "</span></div>"
-      + '<div class="muted small">' + t.height_m + " m</div>";
-    tides.appendChild(row);
+  var days = data.days || [];
+  days.forEach(function(d) {
+    var href = "./day.html?date=" + encodeURIComponent(d.date);
+
+    var card = document.createElement("a");
+    card.className = "card";
+    card.href = href;
+
+    card.innerHTML =
+      ""
+        + '<div class="row">'
+        + '  <div>'
+        + '    <div style="font-weight:800;">' + d.dow + "</div>"
+        + '    <div class="muted small">' + d.condition + "</div>"
+        + "  </div>"
+        + '  <div style="text-align:right;">'
+        + '    <div style="font-weight:800;">' + d.temp_c + "&deg;C</div>"
+        + '    <div class="' + pillClass(d.score) + '">' + d.rating + "</div>"
+        + "  </div>"
+        + "</div>"
+        + '<div class="spacer"></div>'
+        + '<div class="row small muted">'
+        + "  <div>Wind: " + d.wind.kts + " kts " + d.wind.dir + "</div>"
+        + "  <div>Waves: " + d.waves.m + " m</div>"
+        + "</div>"
+        + '<div class="spacer"></div>'
+        + '<div class="muted small">Best time to boat: <b>' + d.best_time.start + " - " + d.best_time.end + "</b></div>";
+
+    daysEl.appendChild(card);
   });
 
-  var windows = document.getElementById("windows");
-  windows.innerHTML = "";
-  data.recommended.forEach(function(w) {
-    var row = document.createElement("div");
-    row.className = "row";
-    row.innerHTML = "<div><b>" + w.start + " - " + w.end + "</b></div>"
-      + '<div class="muted small">' + w.score + "/100</div>";
-    windows.appendChild(row);
-  });
-
-  var hours = document.getElementById("hours");
-  hours.innerHTML = "";
-  data.hours.forEach(function(h) {
-    var row = document.createElement("div");
-    row.className = "row small";
-    row.innerHTML = '<div style="width:56px;"><b>' + h.time + "</b></div>"
-      + '<div class="muted">Wind ' + h.wind_kts + " kts</div>"
-      + '<div class="muted">Waves ' + h.wave_m + " m</div>"
-      + '<div class="' + pillClass(h.score) + '">' + h.score + "</div>";
-    hours.appendChild(row);
-  });
+  setFooterNote("");
 }
 
 async function main() {
   var s = getSettings();
-  if (!s.apiBase) {
-    document.getElementById("title").textContent = "Set API in Settings";
-    return;
-  }
+  void s;
 
-  var dayIso = getDateParam();
-  if (!dayIso) {
-    document.getElementById("title").textContent = "Missing date parameter";
+  if (typeof SKIPPY_API_BASE === "undefined" || !SKIPPY_API_BASE) {
+    setFooterNote("Missing API configuration.");
     return;
   }
 
   try {
-    var data = await fetchDay(s.apiBase, dayIso);
-    renderDay(data);
+    var data = await fetchWeek(SKIPPY_API_BASE);
+    renderWeek(data);
   } catch (e) {
-    document.getElementById("title").textContent = "Error: " + e.message;
+    setFooterNote("Error loading data: " + e.message);
   }
 }
 
 main();
-
