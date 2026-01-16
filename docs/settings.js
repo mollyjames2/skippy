@@ -10,7 +10,8 @@ function load() {
 }
 
 function save() {
-  var homeLabel = document.getElementById("homeLabel").value.trim() || "South Devon UK";
+  var homeLabel = document.getElementById("homeLabel").value.trim() ||
+    "South Devon UK";
   localStorage.setItem("skippy_homeLabel", homeLabel);
 
   // Remove legacy setting from older versions
@@ -21,4 +22,3 @@ function save() {
 
 document.getElementById("saveBtn").addEventListener("click", save);
 load();
-

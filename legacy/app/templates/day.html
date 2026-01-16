@@ -1,4 +1,4 @@
-<!doctype html>
+<!DOCTYPE html>
 <html>
   <head>
     <meta charset="utf-8" />
@@ -10,9 +10,9 @@
     <div class="container">
       <div class="row">
         <a class="btn" href="/">Back</a>
-        <div style="text-align:right;">
+        <div style="text-align: right">
           <div class="muted small">{{ data.location }}</div>
-          <div style="font-weight:800;">{{ data.title }}</div>
+          <div style="font-weight: 800">{{ data.title }}</div>
         </div>
       </div>
 
@@ -24,9 +24,11 @@
             <div class="big">{{ data.summary.temp_c }}&deg;C</div>
             <div class="muted">{{ data.summary.condition }}</div>
           </div>
-          <div style="text-align:right;">
+          <div style="text-align: right">
             <div class="muted small">Boating Score</div>
-            <div class="pill excellent" style="font-size:16px;">{{ data.summary.score }}</div>
+            <div class="pill excellent" style="font-size: 16px">
+              {{ data.summary.score }}
+            </div>
           </div>
         </div>
       </div>
@@ -36,22 +38,24 @@
       <div class="tilegrid">
         <div class="tile">
           <div class="muted small">Wind</div>
-          <div style="font-weight:800;">{{ data.tiles.wind_kts }} kts</div>
-          <div class="muted small">Gusts {{ data.tiles.gust_kts }} kts {{ data.tiles.wind_dir }}</div>
+          <div style="font-weight: 800">{{ data.tiles.wind_kts }} kts</div>
+          <div class="muted small">
+            Gusts {{ data.tiles.gust_kts }} kts {{ data.tiles.wind_dir }}
+          </div>
         </div>
         <div class="tile">
           <div class="muted small">Waves</div>
-          <div style="font-weight:800;">{{ data.tiles.wave_m }} m</div>
+          <div style="font-weight: 800">{{ data.tiles.wave_m }} m</div>
           <div class="muted small">Period {{ data.tiles.period_s }} s</div>
         </div>
         <div class="tile">
           <div class="muted small">Visibility</div>
-          <div style="font-weight:800;">{{ data.tiles.visibility_km }} km</div>
+          <div style="font-weight: 800">{{ data.tiles.visibility_km }} km</div>
           <div class="muted small">Precip {{ data.tiles.precip_mm }} mm</div>
         </div>
         <div class="tile">
           <div class="muted small">Daylight</div>
-          <div style="font-weight:800;">Sunrise {{ data.tiles.sunrise }}</div>
+          <div style="font-weight: 800">Sunrise {{ data.tiles.sunrise }}</div>
           <div class="muted small">Sunset {{ data.tiles.sunset }}</div>
         </div>
       </div>
@@ -64,7 +68,10 @@
         <div class="list">
           {% for t in data.tides %}
           <div class="row">
-            <div><b>{{ t.type }} Tide</b> <span class="muted small">{{ t.time }}</span></div>
+            <div>
+              <b>{{ t.type }} Tide</b> <span class="muted small"
+              >{{ t.time }}</span>
+            </div>
             <div class="muted small">{{ t.height_m }} m</div>
           </div>
           {% endfor %}
@@ -84,7 +91,8 @@
         {% endfor %}
         <div class="spacer"></div>
         <div class="muted small">
-          Note: In the real version, this will exclude 1 hour either side of Dartmouth high/low water.
+          Note: In the real version, this will exclude 1 hour either side of
+          Dartmouth high/low water.
         </div>
       </div>
 
@@ -96,7 +104,7 @@
         <div class="list">
           {% for h in data.hours %}
           <div class="row small">
-            <div style="width:56px;"><b>{{ h.time }}</b></div>
+            <div style="width: 56px"><b>{{ h.time }}</b></div>
             <div class="muted">Wind {{ h.wind_kts }} kts</div>
             <div class="muted">Waves {{ h.wave_m }} m</div>
             <div class="pill good">{{ h.score }}</div>
@@ -109,4 +117,3 @@
     </div>
   </body>
 </html>
-

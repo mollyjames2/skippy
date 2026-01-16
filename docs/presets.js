@@ -12,15 +12,15 @@ var SKIPPY_PRESETS = [
       { slug: "turnchapel", name: "Turnchapel" },
       { slug: "oreston", name: "Oreston" },
       { slug: "wembury", name: "Wembury" },
-      { slug: "river-yealm", name: "River Yealm" }
-    ]
+      { slug: "river-yealm", name: "River Yealm" },
+    ],
   },
   {
     group: "Newton Ferrers and Noss Mayo",
     places: [
       { slug: "newton-ferrers", name: "Newton Ferrers" },
-      { slug: "noss-mayo", name: "Noss Mayo" }
-    ]
+      { slug: "noss-mayo", name: "Noss Mayo" },
+    ],
   },
   {
     group: "Bigbury and Avon",
@@ -28,16 +28,16 @@ var SKIPPY_PRESETS = [
       { slug: "bigbury-on-sea", name: "Bigbury-on-Sea" },
       { slug: "river-avon-bantham", name: "River Avon (Bantham)" },
       { slug: "bantham", name: "Bantham" },
-      { slug: "hope-cove", name: "Hope Cove" }
-    ]
+      { slug: "hope-cove", name: "Hope Cove" },
+    ],
   },
   {
     group: "Salcombe and Kingsbridge",
     places: [
       { slug: "salcombe", name: "Salcombe" },
       { slug: "kingsbridge", name: "Kingsbridge" },
-      { slug: "kingsbridge-estuary", name: "Kingsbridge Estuary" }
-    ]
+      { slug: "kingsbridge-estuary", name: "Kingsbridge Estuary" },
+    ],
   },
   {
     group: "Dartmouth and River Dart",
@@ -45,23 +45,23 @@ var SKIPPY_PRESETS = [
       { slug: "dartmouth", name: "Dartmouth" },
       { slug: "kingswear", name: "Kingswear" },
       { slug: "dittisham", name: "Dittisham" },
-      { slug: "totnes", name: "Totnes" }
-    ]
+      { slug: "totnes", name: "Totnes" },
+    ],
   },
   {
     group: "Torbay",
     places: [
       { slug: "brixham", name: "Brixham" },
       { slug: "paignton", name: "Paignton" },
-      { slug: "torquay", name: "Torquay" }
-    ]
+      { slug: "torquay", name: "Torquay" },
+    ],
   },
   {
     group: "Teignmouth and Shaldon",
     places: [
       { slug: "teignmouth", name: "Teignmouth" },
-      { slug: "shaldon", name: "Shaldon" }
-    ]
+      { slug: "shaldon", name: "Shaldon" },
+    ],
   },
   {
     group: "Exe Estuary",
@@ -70,8 +70,7 @@ var SKIPPY_PRESETS = [
       { slug: "dawlish-warren", name: "Dawlish Warren" },
       { slug: "exmouth", name: "Exmouth" },
       { slug: "starcross", name: "Starcross" },
-      { slug: "topsham", name: "Topsham" }
-    ]
-  }
+      { slug: "topsham", name: "Topsham" },
+    ],
+  },
 ];
-

@@ -78,27 +78,28 @@ function renderWeek(data, loc) {
     var card = document.createElement("a");
     card.className = "card";
     card.href = href;
-
+    
     card.innerHTML =
-      ""
+      ''
         + '<div class="row">'
         + '  <div>'
-        + '    <div style="font-weight:800;">' + d.dow + "</div>"
-        + '    <div class="muted small">' + d.condition + "</div>"
-        + "  </div>"
+        + '    <div style="font-weight:800;">' + d.dow + '</div>'
+        + '    <div class="muted small">' + d.condition + '</div>'
+        + '  </div>'
         + '  <div style="text-align:right;">'
-        + '    <div style="font-weight:800;">' + d.temp_c + "&deg;C</div>"
-        + '    <div class="' + pillClass(d.score) + '">' + d.rating + "</div>"
-        + "  </div>"
-        + "</div>"
+        + '    <div style="font-weight:800;">' + d.temp_c + '&deg;C</div>'
+        + '    <div class="' + pillClass(d.score) + '">' + d.rating + '</div>'
+        + '  </div>'
+        + '</div>'
         + '<div class="spacer"></div>'
         + '<div class="row small muted">'
-        + "  <div>Wind: " + d.wind.kts + " kts " + d.wind.dir + "</div>"
-        + "  <div>Waves: " + d.waves.m + " m</div>"
-        + "</div>"
+        + '  <div>Wind: ' + d.wind.kts + ' kts ' + d.wind.dir + '</div>'
+        + '  <div>Waves: ' + d.waves.m + ' m</div>'
+        + '</div>'
         + '<div class="spacer"></div>'
-        + '<div class="muted small">Best time to boat: <b>' + d.best_time.start + " - " + d.best_time.end + "</b></div>';
+        + '<div class="muted small">Best time to boat: <b>' + d.best_time.start + ' - ' + d.best_time.end + '</b></div>';
 
+    
     daysEl.appendChild(card);
   });
 

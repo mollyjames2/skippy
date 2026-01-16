@@ -16,7 +16,7 @@ function requireLocationOrRedirect() {
   return {
     slug: slug,
     name: localStorage.getItem("skippy_locationName") || "South West UK",
-    group: localStorage.getItem("skippy_locationGroup") || ""
+    group: localStorage.getItem("skippy_locationGroup") || "",
   };
 }
 
@@ -34,70 +34,90 @@ async function fetchDay(apiBase, dayIso) {
 }
 
 function tileHtml(label, main, sub) {
-  return ""
-    + '<div class="tile">'
-    + '  <div class="muted small">' + label + "</div>"
-    + '  <div style="font-weight:800;">' + main + "</div>"
-    + '  <div class="muted small">' + sub + "</div>"
-    + "</div>";
+  return "" +
+    '<div class="tile">' +
+    '  <div class="muted small">' + label + "</div>" +
+    '  <div style="font-weight:800;">' + main + "</div>" +
+    '  <div class="muted small">' + sub + "</div>" +
+    "</div>";
 }
 
 function renderDay(data, loc) {
-  var locName = (loc && loc.name) ? loc.name : (data.location || "South West UK");
+  var locName = (loc && loc.name)
+    ? loc.name
+    : (data.location || "South West UK");
   document.getElementById("location").textContent = locName;
   document.getElementById("title").textContent = data.title || data.date;
 
   var summary = document.getElementById("summary");
-  summary.innerHTML = ""
-    + '<div class="row">'
-    + '  <div>'
-    + '    <div class="big">' + data.summary.temp_c + "&deg;C</div>"
-    + '    <div class="muted">' + data.summary.condition + "</div>"
-    + "  </div>"
-    + '  <div style="text-align:right;">'
-    + '    <div class="muted small">Boating Score</div>'
-    + '    <div class="' + pillClass(data.summary.score) + '" style="font-size:16px;">'
-    + data.summary.score
-    + "</div>"
-    + "  </div>"
-    + "</div>";
+  summary.innerHTML = "" +
+    '<div class="row">' +
+    "  <div>" +
+    '    <div class="big">' + data.summary.temp_c + "&deg;C</div>" +
+    '    <div class="muted">' + data.summary.condition + "</div>" +
+    "  </div>" +
+    '  <div style="text-align:right;">' +
+    '    <div class="muted small">Boating Score</div>' +
+    '    <div class="' + pillClass(data.summary.score) +
+    '" style="font-size:16px;">' +
+    data.summary.score +
+    "</div>" +
+    "  </div>" +
+    "</div>";
 
   var tiles = document.getElementById("tiles");
-  tiles.innerHTML = ""
-    + tileHtml("Wind", data.tiles.wind_kts + " kts", "Gusts " + data.tiles.gust_kts + " kts " + data.tiles.wind_dir)
-    + tileHtml("Waves", data.tiles.wave_m + " m", "Period " + data.tiles.period_s + " s")
-    + tileHtml("Visibility", data.tiles.visibility_km + " km", "Precip " + data.tiles.precip_mm + " mm")
-    + tileHtml("Daylight", "Sunrise " + data.tiles.sunrise, "Sunset " + data.tiles.sunset);
+  tiles.innerHTML = "" +
+    tileHtml(
+      "Wind",
+      data.tiles.wind_kts + " kts",
+      "Gusts " + data.tiles.gust_kts + " kts " + data.tiles.wind_dir,
+    ) +
+    tileHtml(
+      "Waves",
+      data.tiles.wave_m + " m",
+      "Period " + data.tiles.period_s + " s",
+    ) +
+    tileHtml(
+      "Visibility",
+      data.tiles.visibility_km + " km",
+      "Precip " + data.tiles.precip_mm + " mm",
+    ) +
+    tileHtml(
+      "Daylight",
+      "Sunrise " + data.tiles.sunrise,
+      "Sunset " + data.tiles.sunset,
+    );
 
   var tides = document.getElementById("tides");
   tides.innerHTML = "";
-  (data.tides || []).forEach(function(t) {
+  (data.tides || []).forEach(function (t) {
     var row = document.createElement("div");
     row.className = "row";
-    row.innerHTML = '<div><b>' + t.type + " Tide</b> <span class=\"muted small\">" + t.time + "</span></div>"
-      + '<div class="muted small">' + t.height_m + " m</div>";
+    row.innerHTML = "<div><b>" + t.type +
+      ' Tide</b> <span class="muted small">' + t.time + "</span></div>" +
+      '<div class="muted small">' + t.height_m + " m</div>";
     tides.appendChild(row);
   });
 
   var windows = document.getElementById("windows");
   windows.innerHTML = "";
-  (data.recommended || []).forEach(function(w) {
+  (data.recommended || []).forEach(function (w) {
     var row = document.createElement("div");
     row.className = "row";
-    row.innerHTML = "<div><b>" + w.start + " - " + w.end + "</b></div>"
-      + '<div class="muted small">' + w.score + "/100</div>";
+    row.innerHTML = "<div><b>" + w.start + " - " + w.end + "</b></div>" +
+      '<div class="muted small">' + w.score + "/100</div>";
     windows.appendChild(row);
   });
 
   var hours = document.getElementById("hours");
   hours.innerHTML = "";
-  (data.hours || []).forEach(function(h) {
+  (data.hours || []).forEach(function (h) {
     var row = document.createElement("div");
     row.className = "row small";
-    row.innerHTML = '<div style="width:56px;"><b>' + h.time + "</b></div>"
-      + '<div class="muted">Wind ' + h.wind_kts + " kts</div>"
-      + '<div class="muted">Waves ' + h.wave_m + " m</div>"
-      + '<div class="' + pillClass(h.score) + '">' + h.score + "</div>";
+    row.innerHTML = '<div style="width:56px;"><b>' + h.time + "</b></div>" +
+      '<div class="muted">Wind ' + h.wind_kts + " kts</div>" +
+      '<div class="muted">Waves ' + h.wave_m + " m</div>" +
+      '<div class="' + pillClass(h.score) + '">' + h.score + "</div>";
     hours.appendChild(row);
   });
 }

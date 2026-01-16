@@ -26,14 +26,14 @@ export default {
 
     ctx.waitUntil(cache.put(cacheKey, resp.clone()));
     return withCors(resp);
-  }
+  },
 };
 
 function corsHeaders() {
   return {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET,OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type"
+    "Access-Control-Allow-Headers": "Content-Type",
   };
 }
 
@@ -49,7 +49,7 @@ function withCors(resp) {
 function jsonResponse(obj) {
   return new Response(JSON.stringify(obj), {
     status: 200,
-    headers: { "Content-Type": "application/json; charset=utf-8" }
+    headers: { "Content-Type": "application/json; charset=utf-8" },
   });
 }
 
@@ -62,7 +62,10 @@ function mockWeek(params) {
     const d = new Date(today.getTime() + i * 86400000);
     const iso = d.toISOString().slice(0, 10);
     const dow = d.toLocaleDateString("en-GB", { weekday: "short" });
-    const label = d.toLocaleDateString("en-GB", { day: "2-digit", month: "short" });
+    const label = d.toLocaleDateString("en-GB", {
+      day: "2-digit",
+      month: "short",
+    });
 
     let score = i < 4 ? 85 - i * 3 : 70 - i * 2;
     score = Math.max(35, Math.min(95, score));
@@ -70,7 +73,13 @@ function mockWeek(params) {
     const windKts = 8 + i;
     const waveM = Math.round((0.6 + i * 0.1) * 10) / 10;
 
-    const rating = score >= 80 ? "Excellent" : score >= 60 ? "Good" : score >= 40 ? "Fair" : "Poor/Avoid";
+    const rating = score >= 80
+      ? "Excellent"
+      : score >= 60
+      ? "Good"
+      : score >= 40
+      ? "Fair"
+      : "Poor/Avoid";
 
     days.push({
       date: iso,
@@ -82,7 +91,7 @@ function mockWeek(params) {
       rating: rating,
       wind: { kts: Math.trunc(windKts), dir: "SSW" },
       waves: { m: waveM, period_s: 5 },
-      best_time: { start: "06:00", end: "20:00" }
+      best_time: { start: "06:00", end: "20:00" },
     });
   }
 
@@ -97,7 +106,11 @@ function mockDay(params) {
   const dayIso = params.get("day_iso") || new Date().toISOString().slice(0, 10);
 
   const d = new Date(dayIso + "T00:00:00Z");
-  const title = d.toLocaleDateString("en-GB", { weekday: "long", day: "2-digit", month: "short" });
+  const title = d.toLocaleDateString("en-GB", {
+    weekday: "long",
+    day: "2-digit",
+    month: "short",
+  });
 
   const hours = [];
   for (let h = 0; h < 24; h++) {
@@ -111,14 +124,14 @@ function mockDay(params) {
       temp_c: Math.round((7.5 + h * 0.05) * 10) / 10,
       wind_kts: wind,
       wave_m: waves,
-      score: Math.trunc(score)
+      score: Math.trunc(score),
     });
   }
 
   const tides = [
     { type: "High", time: "04:34", height_m: 6.2 },
     { type: "Low", time: "10:46", height_m: 2.0 },
-    { type: "High", time: "16:58", height_m: 5.7 }
+    { type: "High", time: "16:58", height_m: 5.7 },
   ];
 
   const recommended = [{ start: "06:00", end: "20:00", score: 85 }];
@@ -137,11 +150,10 @@ function mockDay(params) {
       visibility_km: 22.7,
       precip_mm: 0.0,
       sunrise: "07:50",
-      sunset: "16:18"
+      sunset: "16:18",
     },
     tides: tides,
     recommended: recommended,
-    hours: hours
+    hours: hours,
   };
 }
-
