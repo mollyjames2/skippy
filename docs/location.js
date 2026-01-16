@@ -52,7 +52,7 @@ function renderGroups() {
     return;
   }
 
-  SKIPPY_PRESETS.forEach(function (g) {
+  SKIPPY_PRESETS.forEach(function(g) {
     var groupCard = el("div", "card", "");
     var header = el("div", "muted small", g.group);
     groupCard.appendChild(header);
@@ -60,7 +60,7 @@ function renderGroups() {
     var list = el("div", "", "");
     list.style.marginTop = "10px";
 
-    g.places.forEach(function (p) {
+    g.places.forEach(function(p) {
       var row = el("div", "row", "");
 
       var left = el("div", "", "");
@@ -69,8 +69,12 @@ function renderGroups() {
 
       var right = el("button", "btn", "Select");
       right.type = "button";
-      right.addEventListener("click", function () {
+      right.addEventListener("click", function() {
         setCurrentLocation(p, g.group);
+
+        // One-shot toast shown on Home after redirect.
+        localStorage.setItem("skippy_toast", "Location set to: " + p.name);
+
         document.getElementById("status").textContent = "Selected: " + p.name;
         renderCurrent();
         window.location.href = "./index.html";

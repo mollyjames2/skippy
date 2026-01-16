@@ -15,48 +15,19 @@
 
       <div class="card">
         <div style="font-weight:800; margin-bottom:6px;">Location</div>
-        <div class="muted small" id="currentLocationText">Current: (loading...)</div>
 
-        <div class="spacer"></div>
-
-        <label class="muted small" for="locationSelect">Change location</label>
-        <select id="locationSelect" class="input"></select>
-
-        <div class="spacer"></div>
-
-        <div class="row">
-          <button id="saveLocationBtn" class="btn">Save location</button>
-          <button id="changeLocationPageBtn" class="btn secondary">Pick on location screen</button>
+        <div class="muted small" id="currentLocationText">
+          Current location: (loading...)
         </div>
 
         <div class="spacer"></div>
-        <div class="muted small">
-          Saving returns you to Home so the week view reloads for the new location.
-        </div>
-      </div>
 
-      <div class="card">
-        <div style="font-weight:800; margin-bottom:6px;">Home label</div>
-
-        <label class="muted small" for="homeLabelInput">Label shown on the home screen</label>
-        <input id="homeLabelInput" class="input" type="text" placeholder="e.g. My Boat" />
-
-        <div class="spacer"></div>
-
-        <div class="row">
-          <button id="saveHomeLabelBtn" class="btn">Save label</button>
-          <button id="resetHomeLabelBtn" class="btn secondary">Reset</button>
-        </div>
-
-        <div class="spacer"></div>
-        <div class="muted small" id="settingsStatus"></div>
+        <button id="changeLocationBtn" class="btn">Change location</button>
       </div>
 
       <div class="footer muted small" id="footerNote"></div>
     </div>
 
-    <!-- Presets must load before settings.js -->
-    <script src="./presets.js"></script>
     <script src="./settings.js"></script>
   </body>
 </html>
