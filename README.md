@@ -1,6 +1,6 @@
 README - Skippy
 
-Skippy is a mobile-first web app for boating in South West UK. It shows:
+Skippy is a mobile-first web app for boating in South Devon UK. It shows:
 - the best days to go boating over the next week
 - daily details (wind, waves, visibility, tides)
 - a Boating Score (0-100) and recommended boating windows

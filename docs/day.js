@@ -2,7 +2,7 @@
 
 function getSettings() {
   return {
-    homeLabel: localStorage.getItem("skippy_homeLabel") || "South West UK"
+    homeLabel: localStorage.getItem("skippy_homeLabel") || "South Devon UK"
   };
 }
 
@@ -36,7 +36,7 @@ function tileHtml(label, main, sub) {
 }
 
 function renderDay(data) {
-  document.getElementById("location").textContent = data.location || "South West UK";
+  document.getElementById("location").textContent = data.location || "South Devon UK";
   document.getElementById("title").textContent = data.title || data.date;
 
   var summary = document.getElementById("summary");

@@ -54,7 +54,7 @@ function jsonResponse(obj) {
 }
 
 function mockWeek(params) {
-  const location = params.get("location") || "South West UK";
+  const location = params.get("location") || "South Devon UK";
   const today = new Date();
   const days = [];
 
@@ -93,7 +93,7 @@ function mockWeek(params) {
 }
 
 function mockDay(params) {
-  const location = params.get("location") || "South West UK";
+  const location = params.get("location") || "South Devon UK";
   const dayIso = params.get("day_iso") || new Date().toISOString().slice(0, 10);
 
   const d = new Date(dayIso + "T00:00:00Z");

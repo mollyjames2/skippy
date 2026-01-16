@@ -2,7 +2,7 @@
 
 function getSettings() {
   return {
-    homeLabel: localStorage.getItem("skippy_homeLabel") || "South West UK"
+    homeLabel: localStorage.getItem("skippy_homeLabel") || "South Devon UK"
   };
 }
 
@@ -37,7 +37,7 @@ async function fetchWeek(apiBase) {
 }
 
 function renderWeek(data) {
-  setText("location", data.location || "South West UK");
+  setText("location", data.location || "South Devon UK");
 
   var best = data.best_day || null;
   if (best) {
