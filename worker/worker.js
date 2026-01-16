@@ -19,7 +19,7 @@ export default {
     } else if (url.pathname === "/api/day") {
       resp = jsonResponse(mockDay(url.searchParams));
     } else {
-      resp = new Response("Not found", { status: 404 });
+      resp = new Response("Skippy API: Not found", { status: 404 });
     }
 
     resp.headers.set("Cache-Control", "public, max-age=0, s-maxage=3600");
