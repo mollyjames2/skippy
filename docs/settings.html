@@ -1,55 +1,63 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Skippy - Settings</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <div class="container">
-      <div class="row">
-        <a class="btn" href="./index.html">Back</a>
-        <h1>Settings</h1>
+    <div class="wrap">
+      <div class="topbar">
+        <div class="brand">Skippy</div>
+        <a class="link" href="./index.html">Home</a>
       </div>
 
-      <div class="spacer"></div>
-
       <div class="card">
-        <h2>Defaults</h2>
-        <div class="spacer"></div>
-
-        <div class="muted small">Home area label (display only for now)</div>
-        <div class="spacer"></div>
-        <input
-          id="homeLabel"
-          class="btn"
-          style="width: 100%"
-          placeholder="South Devon UK"
-        />
+        <div style="font-weight:800; margin-bottom:6px;">Location</div>
+        <div class="muted small" id="currentLocationText">Current: (loading...)</div>
 
         <div class="spacer"></div>
 
-        <div class="spacer"></div>
-        <button id="saveBtn" class="btn" style="width: 100%">Save</button>
+        <label class="muted small" for="locationSelect">Change location</label>
+        <select id="locationSelect" class="input"></select>
 
         <div class="spacer"></div>
-        <div id="status" class="muted small"></div>
-      </div>
 
-      <div class="spacer"></div>
+        <div class="row">
+          <button id="saveLocationBtn" class="btn">Save location</button>
+          <button id="changeLocationPageBtn" class="btn secondary">Pick on location screen</button>
+        </div>
 
-      <div class="card">
-        <h2>Next up</h2>
         <div class="spacer"></div>
         <div class="muted small">
-          We'll add tide access rules per user (e.g., block X hours around
-          HW/LW), and real data sources.
+          Saving returns you to Home so the week view reloads for the new location.
         </div>
       </div>
+
+      <div class="card">
+        <div style="font-weight:800; margin-bottom:6px;">Home label</div>
+
+        <label class="muted small" for="homeLabelInput">Label shown on the home screen</label>
+        <input id="homeLabelInput" class="input" type="text" placeholder="e.g. My Boat" />
+
+        <div class="spacer"></div>
+
+        <div class="row">
+          <button id="saveHomeLabelBtn" class="btn">Save label</button>
+          <button id="resetHomeLabelBtn" class="btn secondary">Reset</button>
+        </div>
+
+        <div class="spacer"></div>
+        <div class="muted small" id="settingsStatus"></div>
+      </div>
+
+      <div class="footer muted small" id="footerNote"></div>
     </div>
 
-    <script src="./config.js"></script>
+    <!-- Presets must load before settings.js -->
+    <script src="./presets.js"></script>
     <script src="./settings.js"></script>
   </body>
 </html>
+
