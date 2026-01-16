@@ -155,7 +155,30 @@ function renderWeek(data, loc) {
   setFooterNote("");
 }
 
+function maybeShowSplash() {
+  var splash = document.getElementById("splash");
+  if (!splash) return;
+
+  // Show once per session (refresh shows again, new tab shows again).
+  var seen = sessionStorage.getItem("skippy_splash_seen");
+  if (seen) {
+    if (splash.parentNode) splash.parentNode.removeChild(splash);
+    return;
+  }
+  sessionStorage.setItem("skippy_splash_seen", "1");
+
+  setTimeout(function () {
+    splash.classList.add("splash-hide");
+
+    setTimeout(function () {
+      if (splash && splash.parentNode) splash.parentNode.removeChild(splash);
+    }, 320);
+  }, 800);
+}
+
 async function main() {
+  maybeShowSplash();
+
   // Show any one-shot toast (eg after location change).
   showToastFromStorage();
 
