@@ -153,3 +153,11 @@ h2 {
   transition: opacity 280ms ease;
 }
 
+
+.logo-horz {
+  height: 28px;
+  width: auto;
+  display: block;
+  margin-bottom: 4px;
+}
+
