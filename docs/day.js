@@ -1,16 +1,23 @@
 "use strict";
 
-function getSettings() {
-  return {
-    homeLabel: localStorage.getItem("skippy_homeLabel") || "South Devon UK"
-  };
-}
-
 function pillClass(score) {
   if (score >= 80) return "pill excellent";
   if (score >= 60) return "pill good";
   if (score >= 40) return "pill fair";
   return "pill poor";
+}
+
+function requireLocationOrRedirect() {
+  var slug = localStorage.getItem("skippy_locationSlug") || "";
+  if (!slug) {
+    window.location.href = "./location.html";
+    return null;
+  }
+  return {
+    slug: slug,
+    name: localStorage.getItem("skippy_locationName") || "South West UK",
+    group: localStorage.getItem("skippy_locationGroup") || ""
+  };
 }
 
 function getDateParam() {
@@ -35,8 +42,9 @@ function tileHtml(label, main, sub) {
     + "</div>";
 }
 
-function renderDay(data) {
-  document.getElementById("location").textContent = data.location || "South Devon UK";
+function renderDay(data, loc) {
+  var locName = (loc && loc.name) ? loc.name : (data.location || "South West UK");
+  document.getElementById("location").textContent = locName;
   document.getElementById("title").textContent = data.title || data.date;
 
   var summary = document.getElementById("summary");
@@ -63,7 +71,7 @@ function renderDay(data) {
 
   var tides = document.getElementById("tides");
   tides.innerHTML = "";
-  data.tides.forEach(function(t) {
+  (data.tides || []).forEach(function(t) {
     var row = document.createElement("div");
     row.className = "row";
     row.innerHTML = '<div><b>' + t.type + " Tide</b> <span class=\"muted small\">" + t.time + "</span></div>"
@@ -73,7 +81,7 @@ function renderDay(data) {
 
   var windows = document.getElementById("windows");
   windows.innerHTML = "";
-  data.recommended.forEach(function(w) {
+  (data.recommended || []).forEach(function(w) {
     var row = document.createElement("div");
     row.className = "row";
     row.innerHTML = "<div><b>" + w.start + " - " + w.end + "</b></div>"
@@ -83,7 +91,7 @@ function renderDay(data) {
 
   var hours = document.getElementById("hours");
   hours.innerHTML = "";
-  data.hours.forEach(function(h) {
+  (data.hours || []).forEach(function(h) {
     var row = document.createElement("div");
     row.className = "row small";
     row.innerHTML = '<div style="width:56px;"><b>' + h.time + "</b></div>"
@@ -95,8 +103,8 @@ function renderDay(data) {
 }
 
 async function main() {
-  var s = getSettings();
-  void s;
+  var loc = requireLocationOrRedirect();
+  if (!loc) return;
 
   if (typeof SKIPPY_API_BASE === "undefined" || !SKIPPY_API_BASE) {
     document.getElementById("title").textContent = "Missing API configuration";
@@ -111,7 +119,7 @@ async function main() {
 
   try {
     var data = await fetchDay(SKIPPY_API_BASE, dayIso);
-    renderDay(data);
+    renderDay(data, loc);
   } catch (e) {
     document.getElementById("title").textContent = "Error: " + e.message;
   }

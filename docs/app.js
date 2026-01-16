@@ -1,11 +1,5 @@
 "use strict";
 
-function getSettings() {
-  return {
-    homeLabel: localStorage.getItem("skippy_homeLabel") || "South Devon UK"
-  };
-}
-
 function pillClass(score) {
   if (score >= 80) return "pill excellent";
   if (score >= 60) return "pill good";
@@ -29,6 +23,19 @@ function setFooterNote(msg) {
   setText("footerNote", msg || "");
 }
 
+function requireLocationOrRedirect() {
+  var slug = localStorage.getItem("skippy_locationSlug") || "";
+  if (!slug) {
+    window.location.href = "./location.html";
+    return null;
+  }
+  return {
+    slug: slug,
+    name: localStorage.getItem("skippy_locationName") || "South West UK",
+    group: localStorage.getItem("skippy_locationGroup") || ""
+  };
+}
+
 async function fetchWeek(apiBase) {
   var url = apiBase.replace(/\/+$/, "") + "/api/week";
   var resp = await fetch(url, { method: "GET" });
@@ -36,8 +43,9 @@ async function fetchWeek(apiBase) {
   return await resp.json();
 }
 
-function renderWeek(data) {
-  setText("location", data.location || "South Devon UK");
+function renderWeek(data, loc) {
+  // Prefer user-selected name for the header.
+  setText("location", (loc && loc.name) ? loc.name : (data.location || "South West UK"));
 
   var best = data.best_day || null;
   if (best) {
@@ -89,7 +97,7 @@ function renderWeek(data) {
         + "  <div>Waves: " + d.waves.m + " m</div>"
         + "</div>"
         + '<div class="spacer"></div>'
-        + '<div class="muted small">Best time to boat: <b>' + d.best_time.start + " - " + d.best_time.end + "</b></div>";
+        + '<div class="muted small">Best time to boat: <b>' + d.best_time.start + " - " + d.best_time.end + "</b></div>';
 
     daysEl.appendChild(card);
   });
@@ -98,8 +106,8 @@ function renderWeek(data) {
 }
 
 async function main() {
-  var s = getSettings();
-  void s;
+  var loc = requireLocationOrRedirect();
+  if (!loc) return;
 
   if (typeof SKIPPY_API_BASE === "undefined" || !SKIPPY_API_BASE) {
     setFooterNote("Missing API configuration.");
@@ -108,7 +116,7 @@ async function main() {
 
   try {
     var data = await fetchWeek(SKIPPY_API_BASE);
-    renderWeek(data);
+    renderWeek(data, loc);
   } catch (e) {
     setFooterNote("Error loading data: " + e.message);
   }
