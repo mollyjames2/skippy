@@ -2,8 +2,7 @@
 
 function getSettings() {
   return {
-    homeLabel: localStorage.getItem("skippy_homeLabel") || "South West UK",
-    apiBase: localStorage.getItem("skippy_apiBase") || ""
+    homeLabel: localStorage.getItem("skippy_homeLabel") || "South West UK"
   };
 }
 
@@ -97,8 +96,10 @@ function renderDay(data) {
 
 async function main() {
   var s = getSettings();
-  if (!s.apiBase) {
-    document.getElementById("title").textContent = "Set API in Settings";
+  void s;
+
+  if (typeof SKIPPY_API_BASE === "undefined" || !SKIPPY_API_BASE) {
+    document.getElementById("title").textContent = "Missing API configuration";
     return;
   }
 
@@ -109,7 +110,7 @@ async function main() {
   }
 
   try {
-    var data = await fetchDay(s.apiBase, dayIso);
+    var data = await fetchDay(SKIPPY_API_BASE, dayIso);
     renderDay(data);
   } catch (e) {
     document.getElementById("title").textContent = "Error: " + e.message;
@@ -117,4 +118,3 @@ async function main() {
 }
 
 main();
-
