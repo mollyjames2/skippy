@@ -81,12 +81,14 @@ function requireLocationOrRedirect() {
   };
 }
 
-async function fetchWeek(apiBase) {
-  var url = apiBase.replace(/\/+$/, "") + "/api/week";
+async function fetchWeek(apiBase, slug) {
+  var base = apiBase.replace(/\/+$/, "");
+  var url = base + "/api/week?slug=" + encodeURIComponent(slug || "");
   var resp = await fetch(url, { method: "GET" });
   if (!resp.ok) throw new Error("API error: " + resp.status);
   return await resp.json();
 }
+
 
 function renderWeek(data, loc) {
   setText(
@@ -191,7 +193,7 @@ async function main() {
   }
 
   try {
-    var data = await fetchWeek(SKIPPY_API_BASE);
+    var data = await fetchWeek(SKIPPY_API_BASE, loc.slug);
     renderWeek(data, loc);
   } catch (e) {
     setFooterNote("Error loading data: " + e.message);

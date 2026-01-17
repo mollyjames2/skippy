@@ -53,8 +53,72 @@ function jsonResponse(obj) {
   });
 }
 
+function slugToName(slug) {
+  // Keep in sync with presets.js (for now we only need names).
+  const MAP = {
+    "plymouth": "Plymouth",
+    "royal-william-yard": "Royal William Yard",
+    "turnchapel": "Turnchapel",
+    "oreston": "Oreston",
+    "wembury": "Wembury",
+    "river-yealm": "River Yealm",
+    "newton-ferrers": "Newton Ferrers",
+    "noss-mayo": "Noss Mayo",
+    "bigbury-on-sea": "Bigbury-on-Sea",
+    "river-avon-bantham": "River Avon (Bantham)",
+    "bantham": "Bantham",
+    "hope-cove": "Hope Cove",
+    "salcombe": "Salcombe",
+    "kingsbridge": "Kingsbridge",
+    "kingsbridge-estuary": "Kingsbridge Estuary",
+    "dartmouth": "Dartmouth",
+    "kingswear": "Kingswear",
+    "dittisham": "Dittisham",
+    "totnes": "Totnes",
+    "brixham": "Brixham",
+    "paignton": "Paignton",
+    "torquay": "Torquay",
+    "teignmouth": "Teignmouth",
+    "shaldon": "Shaldon",
+    "dawlish": "Dawlish",
+    "dawlish-warren": "Dawlish Warren",
+    "exmouth": "Exmouth",
+    "starcross": "Starcross",
+    "topsham": "Topsham"
+  };
+
+  if (!slug) return "South Devon UK";
+  return MAP[slug] || humanizeSlug(slug);
+}
+
+function humanizeSlug(slug) {
+  return String(slug || "")
+    .split("-")
+    .map(function(w) {
+      if (!w) return "";
+      return w.charAt(0).toUpperCase() + w.slice(1);
+    })
+    .join(" ");
+}
+
+function hash01(s) {
+  // Deterministic 0..1 based on string.
+  s = String(s || "");
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  // Convert to 0..1
+  return ((h >>> 0) % 1000) / 1000;
+}
+
+
 function mockWeek(params) {
-  const location = params.get("location") || "South Devon UK";
+  const slug = params.get("slug") || "";
+  const location = slugToName(slug);
+  const jitter = hash01(slug);
+
   const today = new Date();
   const days = [];
 
@@ -70,8 +134,9 @@ function mockWeek(params) {
     let score = i < 4 ? 85 - i * 3 : 70 - i * 2;
     score = Math.max(35, Math.min(95, score));
 
-    const windKts = 8 + i;
-    const waveM = Math.round((0.6 + i * 0.1) * 10) / 10;
+    const windKts = 7 + i + Math.round(jitter * 3);
+    const waveM = Math.round((0.5 + i * 0.1 + jitter * 0.2) * 10) / 10;
+
 
     const rating = score >= 80
       ? "Excellent"
@@ -102,7 +167,10 @@ function mockWeek(params) {
 }
 
 function mockDay(params) {
-  const location = params.get("location") || "South Devon UK";
+  const slug = params.get("slug") || "";
+  const location = slugToName(slug);
+  const jitter = hash01(slug);
+
   const dayIso = params.get("day_iso") || new Date().toISOString().slice(0, 10);
 
   const d = new Date(dayIso + "T00:00:00Z");
@@ -142,12 +210,12 @@ function mockDay(params) {
     title: title,
     summary: { temp_c: 9, condition: "Overcast", score: 85 },
     tiles: {
-      wind_kts: 13,
-      gust_kts: 19,
+      wind_kts: 12 + Math.round(jitter * 4),
+      gust_kts: 18 + Math.round(jitter * 6),
+      wave_m: Math.round((1.0 + jitter * 0.4) * 10) / 10,
+      visibility_km: Math.round((18 + jitter * 10) * 10) / 10,
       wind_dir: "SSW",
-      wave_m: 1.1,
       period_s: 4.6,
-      visibility_km: 22.7,
       precip_mm: 0.0,
       sunrise: "07:50",
       sunset: "16:18",

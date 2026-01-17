@@ -25,13 +25,16 @@ function getDateParam() {
   return p.get("date") || "";
 }
 
-async function fetchDay(apiBase, dayIso) {
+async function fetchDay(apiBase, dayIso, slug) {
   var base = apiBase.replace(/\/+$/, "");
-  var url = base + "/api/day?day_iso=" + encodeURIComponent(dayIso);
+  var url = base
+    + "/api/day?day_iso=" + encodeURIComponent(dayIso)
+    + "&slug=" + encodeURIComponent(slug || "");
   var resp = await fetch(url, { method: "GET" });
   if (!resp.ok) throw new Error("API error: " + resp.status);
   return await resp.json();
 }
+
 
 function tileHtml(label, main, sub) {
   return "" +
@@ -138,7 +141,7 @@ async function main() {
   }
 
   try {
-    var data = await fetchDay(SKIPPY_API_BASE, dayIso);
+    var data = await fetchDay(SKIPPY_API_BASE, dayIso, loc.slug);
     renderDay(data, loc);
   } catch (e) {
     document.getElementById("title").textContent = "Error: " + e.message;
