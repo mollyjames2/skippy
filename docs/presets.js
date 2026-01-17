@@ -1,76 +1,77 @@
-"use strict";
+// docs/presets.js
+import { SKIPPY_PLACES } from "./common/places.js";
 
 // Presets are grouped for UI only.
-// We store slug + name in localStorage.
-// Later we can add lat, lon, tide_station_id for each preset.
-var SKIPPY_PRESETS = [
+// Places come from SKIPPY_PLACES (single source of truth).
+export const SKIPPY_PRESETS = [
   {
     group: "Plymouth",
     places: [
-      { slug: "plymouth", name: "Plymouth" },
-      { slug: "royal-william-yard", name: "Royal William Yard" },
-      { slug: "turnchapel", name: "Turnchapel" },
-      { slug: "oreston", name: "Oreston" },
-      { slug: "wembury", name: "Wembury" },
-      { slug: "river-yealm", name: "River Yealm" },
-    ],
+      SKIPPY_PLACES["plymouth"],
+      SKIPPY_PLACES["royal-william-yard"],
+      SKIPPY_PLACES["turnchapel"],
+      SKIPPY_PLACES["oreston"],
+      SKIPPY_PLACES["wembury"],
+      SKIPPY_PLACES["river-yealm"]
+    ]
   },
   {
     group: "Newton Ferrers and Noss Mayo",
     places: [
-      { slug: "newton-ferrers", name: "Newton Ferrers" },
-      { slug: "noss-mayo", name: "Noss Mayo" },
-    ],
+      SKIPPY_PLACES["newton-ferrers"],
+      SKIPPY_PLACES["noss-mayo"]
+    ]
   },
   {
     group: "Bigbury and Avon",
     places: [
-      { slug: "bigbury-on-sea", name: "Bigbury-on-Sea" },
-      { slug: "river-avon-bantham", name: "River Avon (Bantham)" },
-      { slug: "bantham", name: "Bantham" },
-      { slug: "hope-cove", name: "Hope Cove" },
-    ],
+      SKIPPY_PLACES["bigbury-on-sea"],
+      SKIPPY_PLACES["river-avon-bantham"],
+      SKIPPY_PLACES["bantham"],
+      SKIPPY_PLACES["hope-cove"]
+    ]
   },
   {
     group: "Salcombe and Kingsbridge",
     places: [
-      { slug: "salcombe", name: "Salcombe" },
-      { slug: "kingsbridge", name: "Kingsbridge" },
-      { slug: "kingsbridge-estuary", name: "Kingsbridge Estuary" },
-    ],
+      SKIPPY_PLACES["salcombe"],
+      SKIPPY_PLACES["kingsbridge"],
+      SKIPPY_PLACES["kingsbridge-estuary"]
+    ]
   },
   {
     group: "Dartmouth and River Dart",
     places: [
-      { slug: "dartmouth", name: "Dartmouth" },
-      { slug: "kingswear", name: "Kingswear" },
-      { slug: "dittisham", name: "Dittisham" },
-      { slug: "totnes", name: "Totnes" },
-    ],
+      SKIPPY_PLACES["dartmouth"],
+      SKIPPY_PLACES["kingswear"],
+      SKIPPY_PLACES["dittisham"],
+      SKIPPY_PLACES["totnes"]
+    ]
   },
   {
     group: "Torbay",
     places: [
-      { slug: "brixham", name: "Brixham" },
-      { slug: "paignton", name: "Paignton" },
-      { slug: "torquay", name: "Torquay" },
-    ],
+      SKIPPY_PLACES["brixham"],
+      SKIPPY_PLACES["paignton"],
+      SKIPPY_PLACES["torquay"]
+    ]
   },
   {
     group: "Teignmouth and Shaldon",
     places: [
-      { slug: "teignmouth", name: "Teignmouth" },
-      { slug: "shaldon", name: "Shaldon" },
-    ],
+      SKIPPY_PLACES["teignmouth"],
+      SKIPPY_PLACES["shaldon"]
+    ]
   },
   {
     group: "Exe Estuary",
     places: [
-      { slug: "dawlish", name: "Dawlish" },
-      { slug: "dawlish-warren", name: "Dawlish Warren" },
-      { slug: "exmouth", name: "Exmouth" },
-      { slug: "starcross", name: "Starcross" },
-      { slug: "topsham", name: "Topsham" },
-    ],
-  },
+      SKIPPY_PLACES["dawlish"],
+      SKIPPY_PLACES["dawlish-warren"],
+      SKIPPY_PLACES["exmouth"],
+      SKIPPY_PLACES["starcross"],
+      SKIPPY_PLACES["topsham"]
+    ]
+  }
 ];
+

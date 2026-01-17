@@ -1,3 +1,6 @@
+// docs/location.js
+import { SKIPPY_PRESETS } from "./presets.js";
+
 "use strict";
 
 function getCurrentLocation() {
@@ -44,10 +47,7 @@ function renderGroups() {
 
   root.innerHTML = "";
 
-  if (
-    typeof SKIPPY_PRESETS === "undefined" || !SKIPPY_PRESETS ||
-    !SKIPPY_PRESETS.length
-  ) {
+  if (!SKIPPY_PRESETS || !SKIPPY_PRESETS.length) {
     document.getElementById("status").textContent = "No presets found.";
     return;
   }
