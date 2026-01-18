@@ -25,10 +25,14 @@ document.addEventListener("DOMContentLoaded", function() {
   var btn = byId("changeLocationBtn");
   if (btn) {
     btn.addEventListener("click", function() {
-      // The location picker screen will set localStorage keys.
-      // We include a hint so location.html can optionally return here.
       window.location.href = "./location.html?from=settings";
     });
   }
-});
 
+  var aboutBtn = byId("aboutBtn");
+  if (aboutBtn) {
+    aboutBtn.addEventListener("click", function() {
+      window.location.href = "./about.html?from=settings";
+    });
+  }
+});
