@@ -1,168 +1,262 @@
-README - Skippy
 
-Skippy is a mobile-first web app for boating in South Devon UK. It shows:
+```markdown
+# Skippy 
 
-- the best days to go boating over the next week
-- daily details (wind, waves, visibility, tides)
-- a Boating Score (0-100) and recommended boating windows
+Skippy is a lightweight **boating conditions web app** built with:
+- a **static frontend** hosted on GitHub Pages
+- a **Cloudflare Worker API** used as a fallback data source
 
-Skippy is designed to support location-specific tide access rules per user (for
-example: "block X hours around High Water and Low Water"). These rules will be
-configured in Settings and used to calculate recommended windows.
+The app helps boaters quickly assess conditions by showing:
+- a **weekly overview** of boating conditions for a selected location
+- a **daily detail view** for a specific date
+- a simple **location picker** backed by predefined coastal / marine locations
+The core design goal is:
+> **Frontend-first data loading**, with **Worker fallback**, and **minimal moving parts**.
 
-LIVE URLS
+---
 
-- Frontend (GitHub Pages): https://mollyjames2.github.io/skippy/
-- API (Cloudflare Worker): https://skippy-api.moja-e44.workers.dev
+## High-level architecture
 
-API ENDPOINTS
+```
 
-- GET /api/week
-- GET /api/day?day_iso=YYYY-MM-DD
+Browser (GitHub Pages)
+│
+├── Fetch Open-Meteo APIs directly (primary)
+│   ├── Weather API
+│   └── Marine API
+│
+├── Cache computed results in localStorage (1 hour TTL)
+│
+└── Fallback to Cloudflare Worker
+└── Worker fetches Open-Meteo and returns same JSON schema
 
-ARCHITECTURE (FREE HOSTING) Skippy uses a fully free hosting setup:
+```
 
-- Static frontend hosted on GitHub Pages (repo /docs folder)
-- Serverless backend API hosted on Cloudflare Workers (free tier)
+The UI does **not** care where data comes from — browser or Worker — because the JSON contract is the same.
 
-The Worker caches responses at the edge for 1 hour so the app updates
-effectively hourly without needing background jobs.
+---
 
-REPOSITORY LAYOUT Production code lives here:
+## Repository structure
 
-Frontend (GitHub Pages):
+```
 
-- docs/index.html
-- docs/day.html
-- docs/settings.html
-- docs/styles.css
-- docs/config.js (defines SKIPPY_API_BASE)
-- docs/app.js
-- docs/day.js
-- docs/settings.js
+.
+├── docs/                  # Static frontend (GitHub Pages root)
+│   ├── index.html          # Home / week view
+│   ├── day.html            # Day detail view
+│   ├── location.html       # Location picker
+│   │
+│   ├── app.js              # Week view logic (ES module)
+│   ├── day.js              # Day view logic (ES module)
+│   ├── location.js         # Location picker logic (ES module)
+│   ├── presets.js          # Location presets UI
+│   ├── data.js             # Frontend data layer (Open-Meteo + cache + fallback)
+│   │
+│   ├── config.js           # Runtime configuration (API base, defaults)
+│   │
+│   └── common/
+│       └── core.js         # Shared browser-only helpers
+│
+├── shared/
+│   └── places.js           # Single source of truth for locations (lat/lon)
+│
+└── worker/
+└── worker.js           # Cloudflare Worker API (fallback data source)
 
-Backend (Cloudflare Worker):
+```
 
-- worker/worker.js
-- worker/wrangler.toml
+---
 
-Legacy:
+## Key concepts
 
-- legacy/app (or similar) may exist from an earlier FastAPI prototype and is not
-  used in production.
+### 1. Locations (single source of truth)
 
-CONFIGURATION Frontend API base URL is defined in:
+All locations live in **one file**:
 
-- docs/config.js
+```
 
-Example: var SKIPPY_API_BASE = "https://skippy-api.moja-e44.workers.dev";
+shared/places.js
 
-IMPORTANT:
+````
 
-- This URL is not shown in the UI.
-- It is not secret (it will appear in browser network requests).
+Each place defines:
+- `slug`
+- `name`
+- `lat`
+- `lon`
 
-DEPLOYMENT
+This file is imported by:
+- the frontend (for data loading)
+- the Worker (for fallback fetching)
 
-FRONTEND DEPLOY (GITHUB PAGES) Trigger:
+There is **no duplication** of location data.
 
-- Push commits to main that change anything under docs/
+---
 
-GitHub Pages settings:
+### 2. Frontend-first data loading (`docs/data.js`)
 
-- Repo Settings -> Pages
-- Source: Deploy from a branch
-- Branch: main
-- Folder: /docs
+The frontend uses a small data layer that hides all complexity from the UI.
 
-After pushing, the site updates automatically (may take 1-2 minutes).
+Public API:
 
-WORKER DEPLOY (CLOUDFLARE AUTO-DEPLOY FROM GITHUB) Trigger:
+```js
+getWeekData(slug)
+getDayData(slug, dayIso)
+````
 
-- Push commits to main that change anything under worker/**
+What happens internally:
 
-Cloudflare Worker build configuration:
+1. **Cache check**
 
-- Connected repo: mollyjames2/skippy
-- Production branch: main
-- Root directory: worker
-- Deploy command: npx wrangler deploy
-- Watch paths: worker/**
+   * Uses `localStorage`
+   * TTL = **1 hour**
+   * If fresh data exists → return immediately
 
-Worker config file:
+2. **Direct Open-Meteo fetch**
 
-- worker/wrangler.toml must exist and be committed.
+   * Weather API
+   * Marine API
+   * Data is mapped into the same JSON shape the UI already expects
 
-To confirm deployment:
+3. **Worker fallback**
 
-- Cloudflare dashboard -> Workers & Pages -> skippy-api -> Deployments
+   * If Open-Meteo fails (network, rate limit, etc.)
+   * Calls existing Worker endpoints
+   * Worker JSON contract is unchanged
 
-LOCAL DEVELOPMENT
+The UI never needs to know which path was used.
 
-FRONTEND LOCAL RUN From repo root: python -m http.server 8000
+---
 
-Open: http://127.0.0.1:8000/docs/
+### 3. Cloudflare Worker (fallback only)
 
-This avoids browser file:// restrictions and lets fetch() work normally.
+The Worker:
 
-WORKER LOCAL TESTING For most changes, deploy and test against the live Worker
-endpoints. Local wrangler dev can be added later if needed.
+* fetches Open-Meteo weather + marine data
+* computes scores
+* returns JSON for:
 
-SMOKE TESTS
+  * `/week`
+  * `/day`
 
-API Open:
+Important:
 
-- https://skippy-api.moja-e44.workers.dev/api/week Expected: JSON with keys like
-  location, best_day, days[].
+* The Worker API contract is **unchanged**
+* The Worker is no longer the primary data source
+* It exists purely for resilience and backward compatibility
 
-Open:
+---
 
-- https://skippy-api.moja-e44.workers.dev/api/day?day_iso=2026-01-16 Expected:
-  JSON with keys like summary, tiles, tides, recommended, hours.
+### 4. Frontend modules and shared helpers
 
-FRONTEND Open:
+All main frontend scripts are ES modules.
 
-- https://mollyjames2.github.io/skippy/
+Shared browser-only helpers live in:
 
-Expected:
+```
+docs/common/core.js
+```
 
-- Best day card populates
-- 7-day list populates
-- Clicking a day opens daily details
-- Settings shows only user-facing settings (no API URL field)
+This includes:
 
-DEBUGGING
+* `pillClass(score)` – maps scores to CSS classes
+* `requireLocationOrRedirect()` – ensures a location is selected
 
-FRONTEND STUCK ON "LOADING..." Open DevTools:
+These helpers:
 
-- Network tab: confirm config.js and app.js load (status 200)
-- Console tab: check for JS errors
-- Network tab: confirm a request to /api/week is made
+* use browser APIs (`window`, `localStorage`)
+* are shared across pages
+* are intentionally **not** placed in `shared/`
 
-Common issues:
+---
 
-- "SKIPPY_API_BASE is not defined" Fix: ensure index.html loads config.js before
-  app.js
+### 5. Configuration
 
-- "Cannot set properties of null" Fix: JS is referencing an element id that does
-  not exist in HTML
+Runtime configuration lives in:
 
-- "Failed to fetch" or CORS issues Fix: confirm Worker endpoint works and CORS
-  headers exist
+```
+docs/config.js
+```
 
-WORKER ERRORS Check:
+This file defines globals such as:
 
-- Cloudflare dashboard -> Worker -> Deployments for build/deploy failures
-- Open the endpoint directly in a browser to see the error
+* `SKIPPY_API_BASE`
+* default location settings
 
-Common causes:
+Because the main scripts are ES modules, config values are accessed via:
 
-- wrangler.toml missing or incorrect
-- syntax error in worker.js
-- upstream fetch failures (once real data is added)
+```js
+window.SKIPPY_API_BASE
+```
 
-CURRENT STATE
+---
 
-- Frontend renders data from the Worker.
-- Worker currently serves mocked data to prove end-to-end functionality.
-- Worker responses are cached for 1 hour.
+## Data flow summary
+
+### Week view (`index.html`)
+
+1. Load selected location from storage
+2. Call `getWeekData(slug)`
+3. Render weekly cards
+4. Each day links to `day.html?date=YYYY-MM-DD`
+
+### Day view (`day.html`)
+
+1. Load selected location
+2. Read date from URL
+3. Call `getDayData(slug, date)`
+4. Render detailed conditions for the day
+
+---
+
+## Caching behavior
+
+* Cache keys include:
+
+  * view type (`week` / `day`)
+  * location slug
+  * date (for day view)
+* TTL = **1 hour**
+* Cache is automatically refreshed after expiry
+* Cache is updated even when data comes from the Worker
+
+---
+
+## Development
+
+### Frontend
+
+Serve the `docs/` directory locally, e.g.:
+
+```bash
+python -m http.server
+```
+
+### Worker
+
+Use Cloudflare Wrangler:
+
+```bash
+wrangler dev
+```
+
+You can point `SKIPPY_API_BASE` in `config.js` to:
+
+* local Worker (for development)
+* deployed Worker (for production)
+
+---
+
+## Design principles
+
+* No framework
+* No build step
+* Minimal abstraction
+* Explicit data flow
+* One source of truth for locations
+* UI decoupled from data source
+
+---
+
+
+
