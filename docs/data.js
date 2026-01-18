@@ -167,7 +167,10 @@ function buildWeekPayload(open, place) {
     };
   });
 
-  const best = days.reduce((acc, d) => (!acc || d.score > acc.score ? d : acc), null);
+  const best = days.reduce(
+    (acc, d) => (!acc || d.score > acc.score ? d : acc),
+    null
+  );
 
   return {
     location: place?.name || "",
@@ -243,13 +246,11 @@ export async function getWeekData(slug) {
     writeCache(key, data);
     return data;
   } catch (e) {
-    // fallback to worker (if configured)
+    // fallback to worker (if configured) — DO NOT CACHE FALLBACK
     const apiBase = window.SKIPPY_API_BASE;
     if (!apiBase) throw e;
 
-    const data = await fetchFromWorkerWeek(apiBase, slug);
-    writeCache(key, data);
-    return data;
+    return await fetchFromWorkerWeek(apiBase, slug);
   }
 }
 
@@ -259,18 +260,16 @@ export async function getDayData(slug, dayIso) {
   if (cached) return cached;
 
   try {
-    // If week data is Open-Meteo-shaped, build the day payload from it.
+    // Build day payload from week data (Open-Meteo-shaped)
     const week = await getWeekData(slug);
     const data = buildDayPayload(week, dayIso);
     writeCache(key, data);
     return data;
   } catch (e) {
-    // fallback to worker day endpoint if available
+    // fallback to worker day endpoint — DO NOT CACHE FALLBACK
     const apiBase = window.SKIPPY_API_BASE;
     if (!apiBase) throw e;
 
-    const data = await fetchFromWorkerDay(apiBase, slug, dayIso);
-    writeCache(key, data);
-    return data;
+    return await fetchFromWorkerDay(apiBase, slug, dayIso);
   }
 }
