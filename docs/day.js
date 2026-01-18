@@ -1,6 +1,7 @@
 "use strict";
 
 import { pillClass, requireLocationOrRedirect } from "./common/core.js";
+import { getDayData } from "./data.js";
 
 function getDateParam() {
   var p = new URLSearchParams(window.location.search);
@@ -124,8 +125,6 @@ async function main() {
   }
 
   try {
-    import { getDayData } from "./data.js";
-
     var data = await getDayData(loc.slug, dayIso);
     renderDay(data, loc);
   } catch (e) {

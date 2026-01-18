@@ -1,7 +1,7 @@
 "use strict";
 
 import { pillClass, requireLocationOrRedirect } from "./common/core.js";
-
+import { getWeekData } from "./data.js";
 
 
 function setText(id, text) {
@@ -189,8 +189,6 @@ async function main() {
   }
 
   try {
-    import { getWeekData } from "./data.js";
-
     var data = await getWeekData(loc.slug);
     renderWeek(data, loc);
   } catch (e) {
