@@ -13,17 +13,23 @@ function getQueryParam(name) {
 }
 
 document.addEventListener("DOMContentLoaded", function () {
-  var backBtn = byId("backBtn");
-  if (!backBtn) return;
-
   var from = getQueryParam("from");
 
-  backBtn.addEventListener("click", function () {
-    if (from === "settings") {
-      window.location.href = "./settings.html";
-    } else {
-      window.location.href = "./index.html";
-    }
-  });
-});
+  var backBtn = byId("backBtn");
+  if (backBtn) {
+    backBtn.addEventListener("click", function () {
+      if (from === "settings") {
+        window.location.href = "./settings.html";
+      } else {
+        window.location.href = "./index.html";
+      }
+    });
+  }
 
+  var homeBtn = byId("homeBtn");
+  if (homeBtn) {
+    homeBtn.addEventListener("click", function () {
+      window.location.href = "./index.html";
+    });
+  }
+});

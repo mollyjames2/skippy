@@ -1,5 +1,5 @@
-<!DOCTYPE html>
-<html>
+<!doctype html>
+<html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width,initial-scale=1" />
@@ -8,25 +8,20 @@
   </head>
   <body>
     <div id="splash" class="splash">
-      <img
-        src="./assets/skippy.png"
-        alt="Skippy"
-        class="splash-logo"
-      />
+      <img src="./assets/skippy.png" alt="Skippy" class="splash-logo" />
     </div>
 
     <div id="appRoot">
       <div class="container">
-        <div class="row">
+        <div class="topbar">
           <div>
-            <img
-             src="./assets/logo_horz.png"
-              alt="Skippy"
-              class="logo-horz"
-            />
+            <img src="./assets/logo_horz.png" alt="Skippy" class="logo-horz" />
             <div id="location" class="muted small">South Devon UK</div>
           </div>
-          <a class="btn" href="./settings.html">Settings</a>
+
+          <div style="flex:1"></div>
+
+          <button id="settingsBtn" class="btn">Settings</button>
         </div>
 
         <div class="spacer"></div>
@@ -50,10 +45,7 @@
 
       <div class="footerbar">
         <div class="row">
-          <!--
-          <a class="nav-item active" href="./about.html">About</a>
-          <a class="nav-item" href="./location.html">Change location</a>
-          -->
+          <!-- (optional footer nav later) -->
         </div>
       </div>
     </div>

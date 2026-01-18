@@ -3,6 +3,18 @@ import { SKIPPY_PRESETS } from "./presets.js";
 
 "use strict";
 
+function byId(id) {
+  return document.getElementById(id);
+}
+
+function getQueryParam(name) {
+  try {
+    return new URLSearchParams(window.location.search).get(name);
+  } catch (e) {
+    return null;
+  }
+}
+
 function getCurrentLocation() {
   var slug = localStorage.getItem("skippy_locationSlug") || "";
   var name = localStorage.getItem("skippy_locationName") || "";
@@ -23,9 +35,32 @@ function el(tag, className, text) {
   return n;
 }
 
+function wireTopbar() {
+  var from = getQueryParam("from");
+
+  var backBtn = byId("backBtn");
+  if (backBtn) {
+    backBtn.addEventListener("click", function () {
+      // If we came from settings, go back there; otherwise go home.
+      if (from === "settings") {
+        window.location.href = "./settings.html";
+      } else {
+        window.location.href = "./index.html";
+      }
+    });
+  }
+
+  var homeBtn = byId("homeBtn");
+  if (homeBtn) {
+    homeBtn.addEventListener("click", function () {
+      window.location.href = "./index.html";
+    });
+  }
+}
+
 function renderCurrent() {
   var cur = getCurrentLocation();
-  var card = document.getElementById("currentCard");
+  var card = byId("currentCard");
   if (!card) return;
 
   if (!cur.slug) {
@@ -34,7 +69,7 @@ function renderCurrent() {
   }
 
   card.style.display = "block";
-  card.innerHTML = "" +
+  card.innerHTML =
     '<div class="muted small">Current selection</div>' +
     '<div class="spacer"></div>' +
     '<div style="font-weight:800;">' + cur.name + "</div>" +
@@ -42,17 +77,18 @@ function renderCurrent() {
 }
 
 function renderGroups() {
-  var root = document.getElementById("groups");
+  var root = byId("groups");
+  var status = byId("status");
   if (!root) return;
 
   root.innerHTML = "";
 
   if (!SKIPPY_PRESETS || !SKIPPY_PRESETS.length) {
-    document.getElementById("status").textContent = "No presets found.";
+    if (status) status.textContent = "No presets found.";
     return;
   }
 
-  SKIPPY_PRESETS.forEach(function(g) {
+  SKIPPY_PRESETS.forEach(function (g) {
     var groupCard = el("div", "card", "");
     var header = el("div", "muted small", g.group);
     groupCard.appendChild(header);
@@ -60,7 +96,7 @@ function renderGroups() {
     var list = el("div", "", "");
     list.style.marginTop = "10px";
 
-    g.places.forEach(function(p) {
+    g.places.forEach(function (p, idx) {
       var row = el("div", "row", "");
 
       var left = el("div", "", "");
@@ -69,24 +105,27 @@ function renderGroups() {
 
       var right = el("button", "btn", "Select");
       right.type = "button";
-      right.addEventListener("click", function() {
+      right.addEventListener("click", function () {
         setCurrentLocation(p, g.group);
 
         // One-shot toast shown on Home after redirect.
         localStorage.setItem("skippy_toast", "Location set to: " + p.name);
 
-        document.getElementById("status").textContent = "Selected: " + p.name;
+        if (status) status.textContent = "Selected: " + p.name;
         renderCurrent();
+
+        // Go home after selecting.
         window.location.href = "./index.html";
       });
 
       row.appendChild(left);
       row.appendChild(right);
-
       list.appendChild(row);
 
-      var spacer = el("div", "spacer", "");
-      list.appendChild(spacer);
+      // Only add spacer between rows, not after the last one.
+      if (idx !== g.places.length - 1) {
+        list.appendChild(el("div", "spacer", ""));
+      }
     });
 
     groupCard.appendChild(list);
@@ -95,6 +134,7 @@ function renderGroups() {
 }
 
 function main() {
+  wireTopbar();
   renderCurrent();
   renderGroups();
 }

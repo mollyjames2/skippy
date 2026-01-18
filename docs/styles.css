@@ -170,3 +170,11 @@ h2 {
   height: 56px;
 }
 
+.topbar {
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 12px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}

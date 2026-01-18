@@ -18,20 +18,27 @@ function getCurrentLocationLabel() {
   return name;
 }
 
-document.addEventListener("DOMContentLoaded", function() {
+document.addEventListener("DOMContentLoaded", function () {
   setText("footerNote", "");
   setText("currentLocationText", "Current location: " + getCurrentLocationLabel());
 
+  var homeBtn = byId("homeBtn");
+  if (homeBtn) {
+    homeBtn.addEventListener("click", function () {
+      window.location.href = "./index.html";
+    });
+  }
+
   var btn = byId("changeLocationBtn");
   if (btn) {
-    btn.addEventListener("click", function() {
+    btn.addEventListener("click", function () {
       window.location.href = "./location.html?from=settings";
     });
   }
 
   var aboutBtn = byId("aboutBtn");
   if (aboutBtn) {
-    aboutBtn.addEventListener("click", function() {
+    aboutBtn.addEventListener("click", function () {
       window.location.href = "./about.html?from=settings";
     });
   }

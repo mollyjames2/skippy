@@ -7,13 +7,13 @@
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
-    <div class="wrap">
+    <div class="container">
       <div class="topbar">
-        <div class="brand">About Skippy</div>
-        <div style="display:flex; gap:10px; align-items:center;">
-          <button id="backBtn" class="btn">Back</button>
-          <a class="link" href="./index.html">Home</a>
-        </div>
+        <img src="./assets/skippy.png" alt="Skippy" class="logo-horz" />
+        <div style="flex:1"></div>
+
+        <button id="backBtn" class="btn">Back</button>
+        <button id="homeBtn" class="btn">Home</button>
       </div>
 
       <div class="card">
@@ -26,6 +26,8 @@
           an overall Boating Score and recommended time windows.
         </div>
       </div>
+
+      <div class="spacer"></div>
 
       <div class="card">
         <div style="font-weight:800; margin-bottom:6px;">Understanding the ratings</div>
@@ -51,6 +53,8 @@
         </div>
       </div>
 
+      <div class="spacer"></div>
+
       <div class="card">
         <div style="font-weight:800; margin-bottom:6px;">Factors we consider</div>
 
@@ -62,6 +66,8 @@
         </div>
       </div>
 
+      <div class="spacer"></div>
+
       <div class="card warning">
         <div style="font-weight:800; margin-bottom:6px;">Safety notice</div>
         <div class="muted small">
@@ -72,6 +78,8 @@
         </div>
       </div>
 
+      <div class="spacer"></div>
+
       <div class="card">
         <div style="font-weight:800; margin-bottom:6px;">Open source</div>
         <div class="muted small">
@@ -79,7 +87,7 @@
           <br /><br />
           View the source code on GitHub:
           <br />
-          <a class="link" href="https://github.com/mollyjames2/skippy" target="_blank">
+          <a class="link" href="https://github.com/mollyjames2/skippy" target="_blank" rel="noopener">
             github.com/mollyjames2/skippy
           </a>
         </div>

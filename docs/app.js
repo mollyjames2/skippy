@@ -23,6 +23,15 @@ function setFooterNote(msg) {
   setText("footerNote", msg || "");
 }
 
+function wireHomeTopbar() {
+  var settingsBtn = document.getElementById("settingsBtn");
+  if (settingsBtn) {
+    settingsBtn.addEventListener("click", function () {
+      window.location.href = "./settings.html";
+    });
+  }
+}
+
 function showToast(message) {
   if (!message) return;
 
@@ -183,6 +192,7 @@ async function main() {
 
   // Show any one-shot toast (eg after location change).
   showToastFromStorage();
+  wireHomeTopbar();
 
   var loc = requireLocationOrRedirect();
   if (!loc) return;
