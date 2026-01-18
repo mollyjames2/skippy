@@ -1,5 +1,5 @@
 // docs/presets.js
-import { SKIPPY_PLACES } from "../shared/places.js";
+import { SKIPPY_PLACES } from "./shared/places.js";
 
 // Presets are grouped for UI only.
 // Places come from SKIPPY_PLACES (single source of truth).

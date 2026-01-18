@@ -1,6 +1,6 @@
 // docs/data.js
 
-import { PLACES } from "../shared/places.js";
+import { PLACES } from "./shared/places.js";
 
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 

@@ -5,7 +5,7 @@
 // - GET /api/week?slug=...
 // - GET /api/day?day_iso=YYYY-MM-DD&slug=...
 
-import { SKIPPY_PLACES } from "../shared/places.js";
+import { SKIPPY_PLACES } from "../docs/shared/places.js";
 
 const TIMEZONE = "Europe/London";
 
