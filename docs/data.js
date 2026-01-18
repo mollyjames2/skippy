@@ -1,6 +1,6 @@
 // docs/data.js
 
-import { PLACES } from "./shared/places.js";
+import { SKIPPY_PLACES } from "./shared/places.js";
 
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
@@ -118,7 +118,7 @@ function buildDayPayload(weekData, dayIso) {
 -------------------------------------------------- */
 
 export async function getWeekData(slug) {
-  const place = PLACES[slug];
+  const place = SKIPPY_PLACES[slug];
   if (!place) throw new Error("Unknown place");
 
   const key = cacheKey("week", slug);
