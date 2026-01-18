@@ -197,17 +197,19 @@ async function main() {
   var loc = requireLocationOrRedirect();
   if (!loc) return;
 
-  if (typeof SKIPPY_API_BASE === "undefined" || !SKIPPY_API_BASE) {
+  const apiBase = window.SKIPPY_API_BASE;
+  if (!apiBase) {
     setFooterNote("Missing API configuration.");
     return;
   }
 
   try {
-    var data = await fetchWeek(SKIPPY_API_BASE, loc.slug);
+    var data = await fetchWeek(apiBase, loc.slug);
     renderWeek(data, loc);
   } catch (e) {
     setFooterNote("Error loading data: " + e.message);
   }
 }
+
 
 main();

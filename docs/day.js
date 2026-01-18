@@ -129,7 +129,8 @@ async function main() {
   var loc = requireLocationOrRedirect();
   if (!loc) return;
 
-  if (typeof SKIPPY_API_BASE === "undefined" || !SKIPPY_API_BASE) {
+  const apiBase = window.SKIPPY_API_BASE;
+  if (!apiBase) {
     document.getElementById("title").textContent = "Missing API configuration";
     return;
   }
@@ -141,7 +142,7 @@ async function main() {
   }
 
   try {
-    var data = await fetchDay(SKIPPY_API_BASE, dayIso, loc.slug);
+    var data = await fetchDay(apiBase, dayIso, loc.slug);
     renderDay(data, loc);
   } catch (e) {
     document.getElementById("title").textContent = "Error: " + e.message;
