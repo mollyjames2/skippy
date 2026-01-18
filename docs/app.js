@@ -3,7 +3,6 @@
 import { pillClass, getSavedLocation } from "./common/core.js";
 import { getWeekData } from "./data.js";
 
-
 function setText(id, text) {
   var el = document.getElementById(id);
   if (!el) return;
@@ -74,20 +73,10 @@ function showToastFromStorage() {
   showToast(msg);
 }
 
-
-async function fetchWeek(apiBase, slug) {
-  var base = apiBase.replace(/\/+$/, "");
-  var url = base + "/api/week?slug=" + encodeURIComponent(slug || "");
-  var resp = await fetch(url, { method: "GET" });
-  if (!resp.ok) throw new Error("API error: " + resp.status);
-  return await resp.json();
-}
-
-
 function renderWeek(data, loc) {
   setText(
     "location",
-    (loc && loc.name) ? loc.name : (data.location || "South West UK"),
+    loc && loc.name ? loc.name : (data.location || "South West UK")
   );
 
   var best = data.best_day || null;
@@ -99,14 +88,23 @@ function renderWeek(data, loc) {
         '<div class="spacer"></div>' +
         '<div class="row">' +
         "  <div>" +
-        '    <div style="font-weight:800; font-size:18px;">' + best.dow + " " +
-        best.label + "</div>" +
-        '    <div class="muted small">Best window: ' + best.best_time.start +
-        " - " + best.best_time.end + "</div>" +
+        '    <div style="font-weight:800; font-size:18px;">' +
+        best.dow +
+        " " +
+        best.label +
+        "</div>" +
+        '    <div class="muted small">Best window: ' +
+        best.best_time.start +
+        " - " +
+        best.best_time.end +
+        "</div>" +
         "  </div>" +
-        '  <div class="' + pillClass(best.score) +
-        '" style="font-size:16px;">' + best.score + "</div>" +
-        "</div>",
+        '  <div class="' +
+        pillClass(best.score) +
+        '" style="font-size:16px;">' +
+        best.score +
+        "</div>" +
+        "</div>"
     );
   } else {
     setHtml("bestCard", '<div class="muted small">No data</div>');
@@ -125,25 +123,59 @@ function renderWeek(data, loc) {
     card.className = "card";
     card.href = href;
 
-    card.innerHTML = "" +
+    // Defensive (prevents crashes if any field is missing)
+    var windKts = d.wind && d.wind.kts != null ? d.wind.kts : 0;
+    var windDir = d.wind && d.wind.dir ? d.wind.dir : "—";
+    var waveM = d.waves && d.waves.m != null ? d.waves.m : 0;
+
+    var tempC = d.temp_c != null ? d.temp_c : "—";
+    var condition = d.condition || "—";
+    var dow = d.dow || "";
+    var rating = d.rating || "";
+    var score = d.score != null ? d.score : 0;
+
+    var bestStart = d.best_time && d.best_time.start ? d.best_time.start : "—";
+    var bestEnd = d.best_time && d.best_time.end ? d.best_time.end : "—";
+
+    card.innerHTML =
+      "" +
       '<div class="row">' +
       "  <div>" +
-      '    <div style="font-weight:800;">' + d.dow + "</div>" +
-      '    <div class="muted small">' + d.condition + "</div>" +
+      '    <div style="font-weight:800;">' +
+      dow +
+      "</div>" +
+      '    <div class="muted small">' +
+      condition +
+      "</div>" +
       "  </div>" +
       '  <div style="text-align:right;">' +
-      '    <div style="font-weight:800;">' + d.temp_c + "&deg;C</div>" +
-      '    <div class="' + pillClass(d.score) + '">' + d.rating + "</div>" +
+      '    <div style="font-weight:800;">' +
+      tempC +
+      "&deg;C</div>" +
+      '    <div class="' +
+      pillClass(score) +
+      '">' +
+      rating +
+      "</div>" +
       "  </div>" +
       "</div>" +
       '<div class="spacer"></div>' +
       '<div class="row small muted">' +
-      "  <div>Wind: " + d.wind.kts + " kts " + d.wind.dir + "</div>" +
-      "  <div>Waves: " + d.waves.m + " m</div>" +
+      "  <div>Wind: " +
+      windKts +
+      " kts " +
+      windDir +
+      "</div>" +
+      "  <div>Waves: " +
+      waveM +
+      " m</div>" +
       "</div>" +
       '<div class="spacer"></div>' +
-      '<div class="muted small">Best time to boat: <b>' + d.best_time.start +
-      " - " + d.best_time.end + "</b></div>";
+      '<div class="muted small">Best time to boat: <b>' +
+      bestStart +
+      " - " +
+      bestEnd +
+      "</b></div>";
 
     daysEl.appendChild(card);
   });
@@ -178,8 +210,9 @@ async function main() {
   // Show any one-shot toast (eg after location change).
   showToastFromStorage();
   wireHomeTopbar();
-  
+
   var loc = getSavedLocation();
+
   // On first run (or if storage is cleared), stay on Home and prompt for a location.
   if (!loc) {
     setText("location", "No location selected");
@@ -202,13 +235,6 @@ async function main() {
     return;
   }
 
-
-  const apiBase = window.SKIPPY_API_BASE;
-  if (!apiBase) {
-    setFooterNote("Missing API configuration.");
-    return;
-  }
-
   try {
     var data = await getWeekData(loc.slug);
     renderWeek(data, loc);
@@ -216,6 +242,5 @@ async function main() {
     setFooterNote("Error loading data: " + e.message);
   }
 }
-
 
 main();

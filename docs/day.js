@@ -8,127 +8,158 @@ function getDateParam() {
   return p.get("date") || "";
 }
 
-async function fetchDay(apiBase, dayIso, slug) {
-  var base = apiBase.replace(/\/+$/, "");
-  var url = base
-    + "/api/day?day_iso=" + encodeURIComponent(dayIso)
-    + "&slug=" + encodeURIComponent(slug || "");
-  var resp = await fetch(url, { method: "GET" });
-  if (!resp.ok) throw new Error("API error: " + resp.status);
-  return await resp.json();
-}
-
-
 function tileHtml(label, main, sub) {
-  return "" +
+  return (
+    "" +
     '<div class="tile">' +
     '  <div class="muted small">' + label + "</div>" +
     '  <div style="font-weight:800;">' + main + "</div>" +
     '  <div class="muted small">' + sub + "</div>" +
-    "</div>";
+    "</div>"
+  );
 }
 
 function renderDay(data, loc) {
-  var locName = (loc && loc.name)
-    ? loc.name
-    : (data.location || "South West UK");
-  document.getElementById("location").textContent = locName;
-  document.getElementById("title").textContent = data.title || data.date;
+  var locName =
+    loc && loc.name ? loc.name : (data.location || "South West UK");
+
+  var locEl = document.getElementById("location");
+  if (locEl) locEl.textContent = locName;
+
+  var titleEl = document.getElementById("title");
+  if (titleEl) titleEl.textContent = data.title || data.date || "";
+
+  // Defensive: make sure these exist even if a backend returns a partial shape
+  var summaryData = data.summary || {};
+  var tilesData = data.tiles || {};
 
   var summary = document.getElementById("summary");
-  summary.innerHTML = "" +
-    '<div class="row">' +
-    "  <div>" +
-    '    <div class="big">' + data.summary.temp_c + "&deg;C</div>" +
-    '    <div class="muted">' + data.summary.condition + "</div>" +
-    "  </div>" +
-    '  <div style="text-align:right;">' +
-    '    <div class="muted small">Boating Score</div>' +
-    '    <div class="' + pillClass(data.summary.score) +
-    '" style="font-size:16px;">' +
-    data.summary.score +
-    "</div>" +
-    "  </div>" +
-    "</div>";
+  if (summary) {
+    var temp = (summaryData.temp_c ?? "—");
+    var cond = (summaryData.condition ?? "—");
+    var score = (summaryData.score ?? 0);
+
+    summary.innerHTML =
+      "" +
+      '<div class="row">' +
+      "  <div>" +
+      '    <div class="big">' + temp + "&deg;C</div>" +
+      '    <div class="muted">' + cond + "</div>" +
+      "  </div>" +
+      '  <div style="text-align:right;">' +
+      '    <div class="muted small">Boating Score</div>' +
+      '    <div class="' + pillClass(score) + '" style="font-size:16px;">' +
+      score +
+      "</div>" +
+      "  </div>" +
+      "</div>";
+  }
 
   var tiles = document.getElementById("tiles");
-  tiles.innerHTML = "" +
-    tileHtml(
-      "Wind",
-      data.tiles.wind_kts + " kts",
-      "Gusts " + data.tiles.gust_kts + " kts " + data.tiles.wind_dir,
-    ) +
-    tileHtml(
-      "Waves",
-      data.tiles.wave_m + " m",
-      "Period " + data.tiles.period_s + " s",
-    ) +
-    tileHtml(
-      "Visibility",
-      data.tiles.visibility_km + " km",
-      "Precip " + data.tiles.precip_mm + " mm",
-    ) +
-    tileHtml(
-      "Daylight",
-      "Sunrise " + data.tiles.sunrise,
-      "Sunset " + data.tiles.sunset,
-    );
+  if (tiles) {
+    var windKts = (tilesData.wind_kts ?? 0);
+    var gustKts = (tilesData.gust_kts ?? windKts);
+    var windDir = (tilesData.wind_dir ?? "—");
+
+    var waveM = (tilesData.wave_m ?? 0);
+    var periodS = (tilesData.period_s ?? "—");
+
+    var visKm = (tilesData.visibility_km ?? "—");
+    var precipMm = (tilesData.precip_mm ?? "—");
+
+    var sunrise = (tilesData.sunrise ?? "—");
+    var sunset = (tilesData.sunset ?? "—");
+
+    tiles.innerHTML =
+      "" +
+      tileHtml("Wind", windKts + " kts", "Gusts " + gustKts + " kts " + windDir) +
+      tileHtml("Waves", waveM + " m", "Period " + periodS + " s") +
+      tileHtml("Visibility", visKm + " km", "Precip " + precipMm + " mm") +
+      tileHtml("Daylight", "Sunrise " + sunrise, "Sunset " + sunset);
+  }
 
   var tides = document.getElementById("tides");
-  tides.innerHTML = "";
-  (data.tides || []).forEach(function (t) {
-    var row = document.createElement("div");
-    row.className = "row";
-    row.innerHTML = "<div><b>" + t.type +
-      ' Tide</b> <span class="muted small">' + t.time + "</span></div>" +
-      '<div class="muted small">' + t.height_m + " m</div>";
-    tides.appendChild(row);
-  });
+  if (tides) {
+    tides.innerHTML = "";
+    (data.tides || []).forEach(function (t) {
+      var row = document.createElement("div");
+      row.className = "row";
+      row.innerHTML =
+        "<div><b>" +
+        t.type +
+        ' Tide</b> <span class="muted small">' +
+        t.time +
+        "</span></div>" +
+        '<div class="muted small">' +
+        t.height_m +
+        " m</div>";
+      tides.appendChild(row);
+    });
+  }
 
   var windows = document.getElementById("windows");
-  windows.innerHTML = "";
-  (data.recommended || []).forEach(function (w) {
-    var row = document.createElement("div");
-    row.className = "row";
-    row.innerHTML = "<div><b>" + w.start + " - " + w.end + "</b></div>" +
-      '<div class="muted small">' + w.score + "/100</div>";
-    windows.appendChild(row);
-  });
+  if (windows) {
+    windows.innerHTML = "";
+    (data.recommended || []).forEach(function (w) {
+      var row = document.createElement("div");
+      row.className = "row";
+      row.innerHTML =
+        "<div><b>" +
+        w.start +
+        " - " +
+        w.end +
+        "</b></div>" +
+        '<div class="muted small">' +
+        w.score +
+        "/100</div>";
+      windows.appendChild(row);
+    });
+  }
 
   var hours = document.getElementById("hours");
-  hours.innerHTML = "";
-  (data.hours || []).forEach(function (h) {
-    var row = document.createElement("div");
-    row.className = "row small";
-    row.innerHTML = '<div style="width:56px;"><b>' + h.time + "</b></div>" +
-      '<div class="muted">Wind ' + h.wind_kts + " kts</div>" +
-      '<div class="muted">Waves ' + h.wave_m + " m</div>" +
-      '<div class="' + pillClass(h.score) + '">' + h.score + "</div>";
-    hours.appendChild(row);
-  });
+  if (hours) {
+    hours.innerHTML = "";
+    (data.hours || []).forEach(function (h) {
+      var row = document.createElement("div");
+      row.className = "row small";
+      row.innerHTML =
+        '<div style="width:56px;"><b>' +
+        h.time +
+        "</b></div>" +
+        '<div class="muted">Wind ' +
+        h.wind_kts +
+        " kts</div>" +
+        '<div class="muted">Waves ' +
+        h.wave_m +
+        " m</div>" +
+        '<div class="' +
+        pillClass(h.score) +
+        '">' +
+        h.score +
+        "</div>";
+      hours.appendChild(row);
+    });
+  }
 }
 
 async function main() {
   var loc = requireLocationOrRedirect();
   if (!loc) return;
 
-  const apiBase = window.SKIPPY_API_BASE;
-  if (!apiBase) {
-    document.getElementById("title").textContent = "Missing API configuration";
-    return;
-  }
-
   var dayIso = getDateParam();
   if (!dayIso) {
-    document.getElementById("title").textContent = "Missing date parameter";
+    var titleEl = document.getElementById("title");
+    if (titleEl) titleEl.textContent = "Missing date parameter";
     return;
   }
 
   try {
+    // getDayData now handles Open-Meteo mapping and worker fallback internally
     var data = await getDayData(loc.slug, dayIso);
     renderDay(data, loc);
   } catch (e) {
-    document.getElementById("title").textContent = "Error: " + e.message;
+    var titleEl2 = document.getElementById("title");
+    if (titleEl2) titleEl2.textContent = "Error: " + e.message;
   }
 }
 
