@@ -16,17 +16,31 @@ function getQueryParam(name) {
 }
 
 function getCurrentLocation() {
-  var slug = localStorage.getItem("skippy_locationSlug") || "";
-  var name = localStorage.getItem("skippy_locationName") || "";
-  var group = localStorage.getItem("skippy_locationGroup") || "";
-  return { slug: slug, name: name, group: group };
+  try {
+    const raw = localStorage.getItem("skippy.location");
+    if (!raw) return { slug: "", name: "", group: "" };
+    const loc = JSON.parse(raw);
+    return {
+      slug: loc.slug || "",
+      name: loc.name || "",
+      group: loc.group || ""
+    };
+  } catch (e) {
+    return { slug: "", name: "", group: "" };
+  }
 }
 
 function setCurrentLocation(place, groupName) {
-  localStorage.setItem("skippy_locationSlug", place.slug);
-  localStorage.setItem("skippy_locationName", place.name);
-  localStorage.setItem("skippy_locationGroup", groupName);
+  localStorage.setItem(
+    "skippy.location",
+    JSON.stringify({
+      slug: place.slug,
+      name: place.name,
+      group: groupName
+    })
+  );
 }
+
 
 function el(tag, className, text) {
   var n = document.createElement(tag);

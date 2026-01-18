@@ -11,19 +11,28 @@ export function pillClass(score) {
 
 /**
  * Load the selected location from storage.
+ * Returns null if missing/invalid.
+ */
+export function getSavedLocation() {
+  try {
+    const raw = localStorage.getItem("skippy.location");
+    if (!raw) return null;
+    return JSON.parse(raw);
+  } catch (e) {
+    return null;
+  }
+}
+
+/**
+ * For pages that *must* have a location (e.g. day details).
  * Redirects to location picker if missing.
  */
 export function requireLocationOrRedirect() {
-  try {
-    const raw = localStorage.getItem("skippy.location");
-    if (!raw) {
-      window.location.href = "location.html";
-      return null;
-    }
-    return JSON.parse(raw);
-  } catch (e) {
-    window.location.href = "location.html";
+  const loc = getSavedLocation();
+  if (!loc) {
+    window.location.href = "./location.html";
     return null;
   }
+  return loc;
 }
 

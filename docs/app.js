@@ -1,6 +1,6 @@
 "use strict";
 
-import { pillClass, requireLocationOrRedirect } from "./common/core.js";
+import { pillClass, getSavedLocation } from "./common/core.js";
 import { getWeekData } from "./data.js";
 
 
@@ -178,9 +178,30 @@ async function main() {
   // Show any one-shot toast (eg after location change).
   showToastFromStorage();
   wireHomeTopbar();
+  
+  var loc = getSavedLocation();
+  // On first run (or if storage is cleared), stay on Home and prompt for a location.
+  if (!loc) {
+    setText("location", "No location selected");
 
-  var loc = requireLocationOrRedirect();
-  if (!loc) return;
+    setHtml(
+      "bestCard",
+      "" +
+        '<div class="muted small">Choose your location to see the best boating days this week.</div>' +
+        '<div class="spacer"></div>' +
+        '<a class="btn" href="./location.html">Choose location</a>'
+    );
+
+    var daysEl = document.getElementById("days");
+    if (daysEl) {
+      daysEl.innerHTML =
+        '<div class="card"><div class="muted small">Select a location to load the 7-day forecast.</div></div>';
+    }
+
+    setFooterNote("");
+    return;
+  }
+
 
   const apiBase = window.SKIPPY_API_BASE;
   if (!apiBase) {

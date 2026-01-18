@@ -11,12 +11,22 @@ function setText(id, text) {
 }
 
 function getCurrentLocationLabel() {
-  var name = localStorage.getItem("skippy_locationName") || "";
-  var group = localStorage.getItem("skippy_locationGroup") || "";
+  var name = "";
+  var group = "";
+  try {
+    const raw = localStorage.getItem("skippy.location") || "";
+    if (raw) {
+      const loc = JSON.parse(raw);
+      name = loc.name || "";
+      group = loc.group || "";
+    }
+  } catch (e) {}
+
   if (!name) return "None selected";
   if (group) return name + " (" + group + ")";
   return name;
 }
+
 
 document.addEventListener("DOMContentLoaded", function () {
   setText("footerNote", "");
