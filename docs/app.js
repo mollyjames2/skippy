@@ -1,11 +1,8 @@
 "use strict";
 
-function pillClass(score) {
-  if (score >= 80) return "pill excellent";
-  if (score >= 60) return "pill good";
-  if (score >= 40) return "pill fair";
-  return "pill poor";
-}
+import { pillClass, requireLocationOrRedirect } from "./common/core.js";
+
+
 
 function setText(id, text) {
   var el = document.getElementById(id);
@@ -77,18 +74,6 @@ function showToastFromStorage() {
   showToast(msg);
 }
 
-function requireLocationOrRedirect() {
-  var slug = localStorage.getItem("skippy_locationSlug") || "";
-  if (!slug) {
-    window.location.href = "./location.html";
-    return null;
-  }
-  return {
-    slug: slug,
-    name: localStorage.getItem("skippy_locationName") || "South West UK",
-    group: localStorage.getItem("skippy_locationGroup") || "",
-  };
-}
 
 async function fetchWeek(apiBase, slug) {
   var base = apiBase.replace(/\/+$/, "");
