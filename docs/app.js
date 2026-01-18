@@ -189,7 +189,9 @@ async function main() {
   }
 
   try {
-    var data = await fetchWeek(apiBase, loc.slug);
+    import { getWeekData } from "./data.js";
+
+    var data = await getWeekData(loc.slug);
     renderWeek(data, loc);
   } catch (e) {
     setFooterNote("Error loading data: " + e.message);

@@ -124,7 +124,9 @@ async function main() {
   }
 
   try {
-    var data = await fetchDay(apiBase, dayIso, loc.slug);
+    import { getDayData } from "./data.js";
+
+    var data = await getDayData(loc.slug, dayIso);
     renderDay(data, loc);
   } catch (e) {
     document.getElementById("title").textContent = "Error: " + e.message;
