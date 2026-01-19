@@ -1,21 +1,29 @@
+```js
 // docs/data.js
 
 import { SKIPPY_PLACES } from "./shared/places.js";
+import { buildOpenMeteoUrl, makeBundleEnvelope } from "./shared/openmeteoSpec.js";
 
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
-function cacheKey(type, slug, extra = "") {
-  return `skippy.cache.${type}.${slug}.${extra}`;
+/* --------------------------------------------------
+   Cache helpers (single bundle cache per location)
+-------------------------------------------------- */
+
+function bundleCacheKey(slug) {
+  return "skippy.cache.bundle." + slug;
 }
 
 function readCache(key) {
   try {
     const raw = localStorage.getItem(key);
     if (!raw) return null;
-    const { ts, data } = JSON.parse(raw);
+    const parsed = JSON.parse(raw);
+    const ts = parsed.ts;
+    const data = parsed.data;
     if (Date.now() - ts > CACHE_TTL_MS) return null;
     return data;
-  } catch {
+  } catch (e) {
     return null;
   }
 }
@@ -26,62 +34,88 @@ function writeCache(key, data) {
       key,
       JSON.stringify({
         ts: Date.now(),
-        data,
+        data: data,
       })
     );
-  } catch {}
+  } catch (e) {}
 }
 
 /* --------------------------------------------------
-   Worker fetch (unchanged contract)
+   Utility helpers
 -------------------------------------------------- */
 
-async function fetchFromWorkerWeek(apiBase, slug) {
-  const res = await fetch(`${apiBase}/week?place=${encodeURIComponent(slug)}`);
-  if (!res.ok) throw new Error("Worker week fetch failed");
-  return res.json();
+function resolvePlace(slug) {
+  const place = SKIPPY_PLACES[slug];
+  if (!place) throw new Error("Unknown place");
+  return place;
 }
 
-async function fetchFromWorkerDay(apiBase, slug, dayIso) {
-  const res = await fetch(
-    `${apiBase}/day?place=${encodeURIComponent(slug)}&date=${encodeURIComponent(
-      dayIso
-    )}`
-  );
-  if (!res.ok) throw new Error("Worker day fetch failed");
-  return res.json();
+function getApiBase() {
+  return typeof window !== "undefined" && window.SKIPPY_API_BASE
+    ? window.SKIPPY_API_BASE
+    : "";
 }
 
-/* --------------------------------------------------
-   Open-Meteo fetch + mapping
--------------------------------------------------- */
-
-async function fetchOpenMeteo(lat, lon) {
-  const weatherUrl =
-    `https://api.open-meteo.com/v1/forecast` +
-    `?latitude=${lat}&longitude=${lon}` +
-    `&daily=weathercode,temperature_2m_max,temperature_2m_min` +
-    `&timezone=auto`;
-
-  const marineUrl =
-    `https://marine-api.open-meteo.com/v1/marine` +
-    `?latitude=${lat}&longitude=${lon}` +
-    `&daily=wave_height_max,wind_speed_10m_max` +
-    `&timezone=auto`;
-
-  const [weatherRes, marineRes] = await Promise.all([
-    fetch(weatherUrl),
-    fetch(marineUrl),
-  ]);
-
-  if (!weatherRes.ok || !marineRes.ok) {
-    throw new Error("Open-Meteo fetch failed");
+async function fetchJson(url) {
+  const res = await fetch(url);
+  if (!res.ok) {
+    const txt = await res.text().catch(function () {
+      return "";
+    });
+    throw new Error("Fetch failed " + res.status + ": " + txt.slice(0, 200));
   }
+  return res.json();
+}
 
-  return {
-    weather: await weatherRes.json(),
-    marine: await marineRes.json(),
-  };
+/* --------------------------------------------------
+   Bundle fetch (browser-first, worker fallback)
+-------------------------------------------------- */
+
+async function fetchBundleFromUpstream(place) {
+  const weatherUrl = buildOpenMeteoUrl("weather", { lat: place.lat, lon: place.lon });
+  const marineUrl = buildOpenMeteoUrl("marine", { lat: place.lat, lon: place.lon });
+
+  const results = await Promise.all([fetchJson(weatherUrl), fetchJson(marineUrl)]);
+  const weather = results[0];
+  const marine = results[1];
+
+  return makeBundleEnvelope({
+    slug: place.slug,
+    place: place,
+    weather: weather,
+    marine: marine,
+  });
+}
+
+async function fetchBundleFromWorker(slug) {
+  const apiBase = getApiBase();
+  if (!apiBase) throw new Error("SKIPPY_API_BASE not configured");
+  const url = apiBase + "/api/bundle?slug=" + encodeURIComponent(slug);
+  return fetchJson(url);
+}
+
+/*
+ * Single source of truth for all screens.
+ * - One cached bundle per location
+ * - Refresh once per hour
+ * - Browser fetches upstream first; Worker is fallback only
+ */
+export async function getBundle(slug) {
+  const place = resolvePlace(slug);
+  const key = bundleCacheKey(place.slug);
+
+  const cached = readCache(key);
+  if (cached) return cached;
+
+  try {
+    const b = await fetchBundleFromUpstream(place);
+    writeCache(key, b);
+    return b;
+  } catch (err) {
+    const b = await fetchBundleFromWorker(place.slug);
+    writeCache(key, b);
+    return b;
+  }
 }
 
 /* --------------------------------------------------
@@ -117,46 +151,72 @@ function formatDow(dateIso) {
 
 function formatLabel(dateIso) {
   const d = new Date(dateIso + "T00:00:00");
-  return new Intl.DateTimeFormat(undefined, {
-    day: "2-digit",
-    month: "short",
-  }).format(d);
+  return new Intl.DateTimeFormat(undefined, { day: "2-digit", month: "short" }).format(d);
 }
 
-/**
- * Convert Open-Meteo responses into
- * the SAME JSON shape the UI already expects (home list).
- */
-function buildWeekPayload(open, place) {
-  const times = open?.weather?.daily?.time || [];
-  const codes = open?.weather?.daily?.weathercode || [];
-  const tmax = open?.weather?.daily?.temperature_2m_max || [];
+function clamp(n, a, b) {
+  return Math.max(a, Math.min(b, n));
+}
 
-  const waveMax = open?.marine?.daily?.wave_height_max || [];
-  const windMaxKmh = open?.marine?.daily?.wind_speed_10m_max || [];
+function round1(x) {
+  const n = Number(x);
+  if (!isFinite(n)) return 0;
+  return Math.round(n * 10) / 10;
+}
 
-  const days = times.map((date, i) => {
-    const wave = waveMax[i] ?? 0;
-    const windKmh = windMaxKmh[i] ?? 0;
+function kmhToKnotsFloat(kmh) {
+  const n = Number(kmh);
+  if (!isFinite(n)) return null;
+  return n * 0.539957;
+}
 
-    // Simple boating score heuristic (tweak later if you like)
+function scoreHourPlaceholder(opts) {
+  const wave = Number(opts.wave_m);
+  const wind = Number(opts.wind_kmh);
+
+  let s = 100;
+  if (isFinite(wave)) s -= wave * 20;
+  if (isFinite(wind)) s -= wind;
+
+  return Math.round(clamp(s, 0, 100));
+}
+
+/* --------------------------------------------------
+   Week builder (from bundle daily layers)
+-------------------------------------------------- */
+
+function buildWeekPayloadFromBundle(bundle, place) {
+  const wDaily = (bundle && bundle.weather && bundle.weather.daily) ? bundle.weather.daily : {};
+  const mDaily = (bundle && bundle.marine && bundle.marine.daily) ? bundle.marine.daily : {};
+
+  const times = wDaily.time || [];
+  const codes = wDaily.weather_code || [];
+  const tmax = wDaily.temperature_2m_max || [];
+
+  const waveMax = mDaily.wave_height_max || [];
+  const windMaxKmh = wDaily.wind_speed_10m_max || [];
+
+  const days = times.map(function (date, i) {
+    const wave = (typeof waveMax[i] !== "undefined" && waveMax[i] !== null) ? waveMax[i] : 0;
+    const windKmh = (typeof windMaxKmh[i] !== "undefined" && windMaxKmh[i] !== null) ? windMaxKmh[i] : 0;
+
     const scoreRaw = 100 - wave * 20 - windKmh;
     const score = Math.max(0, Math.round(scoreRaw));
 
     return {
-      date,
+      date: date,
       dow: formatDow(date),
       label: formatLabel(date),
 
       condition: weatherCodeToText(codes[i]),
-      temp_c: Math.round(tmax[i] ?? 0),
+      temp_c: Math.round((typeof tmax[i] !== "undefined" && tmax[i] !== null) ? tmax[i] : 0),
 
-      score,
+      score: score,
       rating: scoreToRating(score),
 
       wind: {
         kts: kmhToKnots(windKmh),
-        dir: "—",
+        dir: "-",
       },
 
       waves: {
@@ -167,15 +227,15 @@ function buildWeekPayload(open, place) {
     };
   });
 
-  const best = days.reduce(
-    (acc, d) => (!acc || d.score > acc.score ? d : acc),
-    null
-  );
+  const best = days.reduce(function (acc, d) {
+    if (!acc || d.score > acc.score) return d;
+    return acc;
+  }, null);
 
   return {
-    location: place?.name || "",
-    place, // keep for other pages that still expect it
-    days,
+    location: (place && place.name) ? place.name : "",
+    place: place,
+    days: days,
     best_day: best
       ? {
           dow: best.dow,
@@ -187,44 +247,100 @@ function buildWeekPayload(open, place) {
   };
 }
 
-/**
- * Build a day payload that won't crash day.js:
- * provides common fields even if we don't have tides/hourly yet.
- */
-function buildDayPayload(weekData, dayIso) {
-  const day = (weekData.days || []).find((d) => d.date === dayIso);
-  if (!day) throw new Error("Day not found");
+/* --------------------------------------------------
+   Day builder (daily summary + hourly rows from bundle)
+-------------------------------------------------- */
+
+function buildDayPayloadFromBundle(bundle, place, dayIso) {
+  const wDaily = (bundle && bundle.weather && bundle.weather.daily) ? bundle.weather.daily : {};
+  const mDaily = (bundle && bundle.marine && bundle.marine.daily) ? bundle.marine.daily : {};
+
+  const dTimes = wDaily.time || [];
+  const dayIdx = dTimes.indexOf(dayIso);
+  if (dayIdx < 0) throw new Error("Day not found in daily data");
+
+  const code = (wDaily.weather_code || [])[dayIdx];
+  const tmax = (wDaily.temperature_2m_max || [])[dayIdx];
+  const tmin = (wDaily.temperature_2m_min || [])[dayIdx];
+
+  const windMaxKmh = (wDaily.wind_speed_10m_max || [])[dayIdx];
+  const gustMaxKmh = (wDaily.wind_gusts_10m_max || [])[dayIdx];
+
+  const precipSum = (wDaily.precipitation_sum || [])[dayIdx];
+
+  const sunrise = (wDaily.sunrise || [])[dayIdx];
+  const sunset = (wDaily.sunset || [])[dayIdx];
+
+  const waveMax = (mDaily.wave_height_max || [])[dayIdx];
+  const wavePeriodMax = (mDaily.wave_period_max || [])[dayIdx];
+
+  const dayScore = scoreHourPlaceholder({ wave_m: waveMax || 0, wind_kmh: windMaxKmh || 0 });
+  const title = formatDow(dayIso) + " " + formatLabel(dayIso);
+
+  const wHourly = (bundle && bundle.weather && bundle.weather.hourly) ? bundle.weather.hourly : {};
+  const mHourly = (bundle && bundle.marine && bundle.marine.hourly) ? bundle.marine.hourly : {};
+
+  const wTimes = wHourly.time || [];
+  const mTimes = mHourly.time || [];
+
+  const marineIndexByTime = {};
+  for (let i = 0; i < mTimes.length; i++) marineIndexByTime[mTimes[i]] = i;
+
+  const hours = [];
+  for (let i = 0; i < wTimes.length; i++) {
+    const t = String(wTimes[i] || "");
+    if (t.slice(0, 10) !== dayIso) continue;
+
+    const j = marineIndexByTime[t];
+    const windKmhH = (wHourly.wind_speed_10m || [])[i];
+    const waveMH = (j != null && mHourly.wave_height) ? mHourly.wave_height[j] : null;
+
+    const score = scoreHourPlaceholder({ wave_m: waveMH || 0, wind_kmh: windKmhH || 0 });
+
+    hours.push({
+      time: t.slice(11, 16),
+      temp_c: round1((wHourly.temperature_2m || [])[i]),
+      wind_kts: Math.round(kmhToKnotsFloat(windKmhH) || 0),
+      wave_m: round1(waveMH || 0),
+      score: score,
+    });
+  }
 
   return {
-    location: weekData.location || weekData.place?.name || "",
-    place: weekData.place,
-    date: day.date,
-    title: `${day.dow} ${day.label}`,
+    location: (place && place.name) ? place.name : "",
+    place: place,
+    date: dayIso,
+    title: title,
 
     summary: {
-      temp_c: day.temp_c,
-      condition: day.condition,
-      score: day.score,
+      temp_c: Math.round(tmax || 0),
+      temp_max_c: Math.round(tmax || 0),
+      temp_min_c: Math.round(tmin || 0),
+      condition: weatherCodeToText(code),
+      score: dayScore,
+
+      best_time_window: { start: "All day", end: "All day" },
+      tides_status: "Coming soon",
     },
 
     tiles: {
-      wind_kts: day.wind?.kts ?? 0,
-      gust_kts: day.wind?.kts ?? 0,
-      wind_dir: day.wind?.dir ?? "—",
+      wind_kts: Math.round(kmhToKnotsFloat(windMaxKmh) || 0),
+      gust_kts: Math.round(kmhToKnotsFloat(gustMaxKmh) || 0),
+      wind_dir: "-",
 
-      wave_m: day.waves?.m ?? 0,
-      period_s: "—",
+      wave_m: round1(waveMax || 0),
+      period_s: round1(wavePeriodMax || 0),
 
-      visibility_km: "—",
-      precip_mm: "—",
+      visibility_km: "-",
+      precip_mm: round1(precipSum || 0),
 
-      sunrise: "—",
-      sunset: "—",
+      sunrise: sunrise ? String(sunrise).slice(11, 16) : "-",
+      sunset: sunset ? String(sunset).slice(11, 16) : "-",
     },
 
     tides: [],
-    recommended: [{ start: "All day", end: "All day", score: day.score }],
-    hours: [],
+    recommended: [{ start: "All day", end: "All day", score: dayScore }],
+    hours: hours,
   };
 }
 
@@ -233,43 +349,14 @@ function buildDayPayload(weekData, dayIso) {
 -------------------------------------------------- */
 
 export async function getWeekData(slug) {
-  const place = SKIPPY_PLACES[slug];
-  if (!place) throw new Error("Unknown place");
-
-  const key = cacheKey("week", slug);
-  const cached = readCache(key);
-  if (cached) return cached;
-
-  try {
-    const open = await fetchOpenMeteo(place.lat, place.lon);
-    const data = buildWeekPayload(open, place);
-    writeCache(key, data);
-    return data;
-  } catch (e) {
-    // fallback to worker (if configured) — DO NOT CACHE FALLBACK
-    const apiBase = window.SKIPPY_API_BASE;
-    if (!apiBase) throw e;
-
-    return await fetchFromWorkerWeek(apiBase, slug);
-  }
+  const place = resolvePlace(slug);
+  const bundle = await getBundle(slug);
+  return buildWeekPayloadFromBundle(bundle, place);
 }
 
 export async function getDayData(slug, dayIso) {
-  const key = cacheKey("day", slug, dayIso);
-  const cached = readCache(key);
-  if (cached) return cached;
-
-  try {
-    // Build day payload from week data (Open-Meteo-shaped)
-    const week = await getWeekData(slug);
-    const data = buildDayPayload(week, dayIso);
-    writeCache(key, data);
-    return data;
-  } catch (e) {
-    // fallback to worker day endpoint — DO NOT CACHE FALLBACK
-    const apiBase = window.SKIPPY_API_BASE;
-    if (!apiBase) throw e;
-
-    return await fetchFromWorkerDay(apiBase, slug, dayIso);
-  }
+  const place = resolvePlace(slug);
+  const bundle = await getBundle(slug);
+  return buildDayPayloadFromBundle(bundle, place, dayIso);
 }
+```
