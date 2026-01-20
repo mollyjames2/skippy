@@ -10,7 +10,6 @@
 export const SKIPPY_PLACES = {
   // Home base
   "dartmouth": { slug: "dartmouth", name: "Dartmouth", lat: 50.3514, lon: -3.5803 },
-  "totnes": { slug: "totnes", name: "Totnes", lat: 50.4326, lon: -3.6843 },
 
   // South Hams coast anchors
   "salcombe": { slug: "salcombe", name: "Salcombe", lat: 50.2375, lon: -3.7684 },
@@ -32,5 +31,5 @@ export const SKIPPY_PLACES = {
 
   // Exe anchors
   "exmouth": { slug: "exmouth", name: "Exmouth", lat: 50.6170, lon: -3.4120 },
-  "topsham": { slug: "topsham", name: "Topsham", lat: 50.6860, lon: -3.4660 }
+
 };

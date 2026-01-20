@@ -77,6 +77,47 @@ async function fetchJson(url) {
   return res.json();
 }
 
+/**
+ * Returns YYYY-MM-DD for "today" in Europe/London (prevents UTC rollover issues).
+ */
+function todayIsoLondon() {
+  const parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/London",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+
+  const y = parts.find((p) => p.type === "year")?.value;
+  const m = parts.find((p) => p.type === "month")?.value;
+  const d = parts.find((p) => p.type === "day")?.value;
+  return `${y}-${m}-${d}`;
+}
+
+/**
+ * Fetch today's TideTimes-derived tides from the Worker.
+ * Returns:
+ *  - { ok:true, events:[...], updated_at, station, ... } on success
+ *  - { ok:false, reason, updated_at, station? } on RSS failure
+ *  - null on network/other failure
+ */
+async function fetchTodayTidesFromWorker(slug) {
+  try {
+    const apiBase = getApiBase();
+    if (!apiBase) return null;
+
+    const url = apiBase + "/api/tides/today?slug=" + encodeURIComponent(slug);
+    const res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) return null;
+
+    const json = await res.json();
+    if (!json) return null;
+    return json;
+  } catch (e) {
+    return null;
+  }
+}
+
 /* --------------------------------------------------
    Bundle fetch (browser-first, worker fallback)
 -------------------------------------------------- */
@@ -194,13 +235,12 @@ function summarizeVisibilityKmForDay(dayIso, wHourly) {
 }
 
 /* --------------------------------------------------
-   Tides (derived from marine.hourly.sea_level_height_msl)
+   Tides (derived from marine.minutely_15.sea_level_height_msl)
    - Semi-diurnal friendly (2H/2L typical, but variable)
    - No forced counts; we detect local extrema in the curve
 -------------------------------------------------- */
 
 function detectExtremaPlateauAware(times, levels) {
-  // Detect sign changes in the first derivative, with plateau handling.
   // Output events: { type: "High"|"Low", iso: "YYYY-MM-DDTHH:MM", height_m: number }
   const events = [];
   if (!times || !levels || times.length < 3 || times.length !== levels.length) return events;
@@ -227,7 +267,6 @@ function detectExtremaPlateauAware(times, levels) {
   for (let i = 0; i < slope.length; i++) {
     const s = slope[i];
     if (s === null) continue;
-
     if (s === 0) continue;
 
     if (lastNonZero === null) {
@@ -238,15 +277,11 @@ function detectExtremaPlateauAware(times, levels) {
     if (lastNonZero === 1 && s === -1) {
       const peakIdx = i;
       const h = Number(levels[peakIdx]);
-      if (isFinite(h)) {
-        events.push({ type: "High", iso: times[peakIdx], height_m: h });
-      }
+      if (isFinite(h)) events.push({ type: "High", iso: times[peakIdx], height_m: h });
     } else if (lastNonZero === -1 && s === 1) {
       const troughIdx = i;
       const h = Number(levels[troughIdx]);
-      if (isFinite(h)) {
-        events.push({ type: "Low", iso: times[troughIdx], height_m: h });
-      }
+      if (isFinite(h)) events.push({ type: "Low", iso: times[troughIdx], height_m: h });
     }
 
     lastNonZero = s;
@@ -275,23 +310,22 @@ function detectExtremaPlateauAware(times, levels) {
 }
 
 function tidesForDay(bundle, dayIso) {
-  const mMinutely_15 = (bundle && bundle.marine && bundle.marine.minutely_15) ? bundle.marine.minutely_15 : {};
+  const mMinutely_15 =
+    (bundle && bundle.marine && bundle.marine.minutely_15) ? bundle.marine.minutely_15 : {};
   const times = mMinutely_15.time || [];
   const levels = mMinutely_15.sea_level_height_msl || [];
   if (!times.length || times.length !== levels.length) return [];
 
   const events = detectExtremaPlateauAware(times, levels);
 
-  const dayEvents = events
-    .filter(e => String(e.iso || "").slice(0, 10) === dayIso)
+  return events
+    .filter((e) => String(e.iso || "").slice(0, 10) === dayIso)
     .sort((a, b) => String(a.iso).localeCompare(String(b.iso)))
-    .map(e => ({
+    .map((e) => ({
       type: e.type,
       time: String(e.iso).slice(11, 16),
       height_m: Math.round(Number(e.height_m) * 10) / 10,
     }));
-
-  return dayEvents;
 }
 
 /* --------------------------------------------------
@@ -361,7 +395,7 @@ function buildWeekPayloadFromBundle(bundle, place) {
    Day builder (DAILY summary + HOURLY rows)
 -------------------------------------------------- */
 
-function buildDayPayloadFromBundle(bundle, place, dayIso) {
+async function buildDayPayloadFromBundle(bundle, place, dayIso) {
   const wDaily = (bundle && bundle.weather && bundle.weather.daily) ? bundle.weather.daily : {};
   const mDaily = (bundle && bundle.marine && bundle.marine.daily) ? bundle.marine.daily : {};
 
@@ -446,8 +480,48 @@ function buildDayPayloadFromBundle(bundle, place, dayIso) {
     });
   }
 
-  // derived tides from marine sea level curve
-  const tides = tidesForDay(bundle, dayIso);
+  // Modelled tides (15-min sea level curve extrema)
+  const modelledTides = tidesForDay(bundle, dayIso);
+
+  // If this is "today" (London), try to override with TideTimes RSS via worker.
+  let tides = modelledTides;
+  let tidesMeta = {
+    source: modelledTides.length ? "model" : "none",
+    message: modelledTides.length
+      ? "Using 15 minute modelled tide predictions"
+      : "Tide data unavailable",
+    updated_at: null,
+    station: null,
+  };
+
+  const todayIso = todayIsoLondon();
+  if (dayIso === todayIso) {
+    const rss = await fetchTodayTidesFromWorker(place.slug);
+
+    if (rss && rss.ok === true && Array.isArray(rss.events) && rss.events.length) {
+      tides = rss.events.map((e) => ({
+        type: e.type,
+        time: e.time,
+        height_m: Math.round(Number(e.height_m) * 10) / 10,
+      }));
+
+      tidesMeta = {
+        source: "tidetimes",
+        message: "Data accessed from Tide Times",
+        updated_at: rss.updated_at || null,
+        station: rss.station || null,
+      };
+    } else {
+      // Clean fallback to modelled tides, but with explicit messaging.
+      tidesMeta = {
+        source: modelledTides.length ? "model" : "none",
+        message:
+          "High accuracy tidal data not available — using 15 minute modelled tide predictions",
+        updated_at: (rss && rss.updated_at) ? rss.updated_at : null,
+        station: (rss && rss.station) ? rss.station : null,
+      };
+    }
+  }
 
   return {
     location: (place && place.name) ? place.name : "",
@@ -463,7 +537,7 @@ function buildDayPayloadFromBundle(bundle, place, dayIso) {
       score: dayScore,
 
       best_time_window: { start: "All day", end: "All day" },
-      tides_status: tides.length ? "Modelled tides" : "Unavailable",
+      tides_status: tides.length ? "Tides available" : "Unavailable",
     },
 
     tiles: {
@@ -486,6 +560,8 @@ function buildDayPayloadFromBundle(bundle, place, dayIso) {
     },
 
     tides: tides,
+    tides_meta: tidesMeta,
+
     recommended: [{ start: "All day", end: "All day", score: dayScore }],
     hours: hours,
   };
