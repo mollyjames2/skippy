@@ -1,4 +1,3 @@
-```js
 // docs/data.js
 
 import { SKIPPY_PLACES } from "./shared/places.js";
@@ -359,4 +358,3 @@ export async function getDayData(slug, dayIso) {
   const bundle = await getBundle(slug);
   return buildDayPayloadFromBundle(bundle, place, dayIso);
 }
-```
