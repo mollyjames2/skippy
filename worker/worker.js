@@ -42,26 +42,38 @@ export default {
       const body = await buildBundle(url.searchParams);
       resp = jsonResponse(body);
     } catch (err) {
+      const status = err && typeof err.status === "number" ? err.status : 500;
       const msg = String(err && err.message ? err.message : err);
-      resp = new Response(JSON.stringify({ error: msg }), {
-        status: 500,
-        headers: { "Content-Type": "application/json; charset=utf-8" }
+      resp = new Response(JSON.stringify({ error: msg, status: status }), {
+        status,
+        headers: { "Content-Type": "application/json; charset=utf-8" },
       });
     }
 
     // Hourly refresh at the edge
     resp.headers.set("Cache-Control", "public, max-age=0, s-maxage=3600");
 
-    ctx.waitUntil(cache.put(cacheKey, resp.clone()));
+    // Only cache successful bundles. Never cache errors.
+    if (resp.status === 200) {
+      ctx.waitUntil(cache.put(cacheKey, resp.clone()));
+    }
+
     return withCors(resp);
-  }
+  },
 };
+
+class HttpError extends Error {
+  constructor(status, message) {
+    super(message);
+    this.status = status;
+  }
+}
 
 function corsHeaders() {
   return {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Methods": "GET,OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type"
+    "Access-Control-Allow-Headers": "Content-Type",
   };
 }
 
@@ -77,25 +89,16 @@ function withCors(resp) {
 function jsonResponse(obj) {
   return new Response(JSON.stringify(obj), {
     status: 200,
-    headers: { "Content-Type": "application/json; charset=utf-8" }
+    headers: { "Content-Type": "application/json; charset=utf-8" },
   });
 }
 
 function resolvePlace(slug) {
   const s = String(slug || "").trim();
-  if (s && SKIPPY_PLACES[s]) return SKIPPY_PLACES[s];
-  return { slug: s, name: humanizeSlug(s) || "South Devon UK", lat: 50.35, lon: -4.10 };
-}
-
-function humanizeSlug(slug) {
-  if (!slug) return "";
-  return String(slug || "")
-    .split("-")
-    .map(function (w) {
-      if (!w) return "";
-      return w.charAt(0).toUpperCase() + w.slice(1);
-    })
-    .join(" ");
+  if (!s) throw new HttpError(400, "Missing slug");
+  const place = SKIPPY_PLACES[s];
+  if (!place) throw new HttpError(404, "Unknown place");
+  return place;
 }
 
 async function fetchJson(url) {
@@ -123,6 +126,6 @@ async function buildBundle(params) {
     slug: place.slug || String(slug || "").trim(),
     place: place,
     weather: weather,
-    marine: marine
+    marine: marine,
   });
 }
