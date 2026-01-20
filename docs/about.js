@@ -20,7 +20,8 @@ document.addEventListener("DOMContentLoaded", function () {
   var backBtn = byId("backBtn");
   if (backBtn) {
     backBtn.addEventListener("click", function () {
-      // Prefer browser history (feels natural on mobile), with safe fallbacks.
+      // Prefer browser history first (feels natural on mobile),
+      // then fall back to explicit routes.
       if (window.history && window.history.length > 1) {
         window.history.back();
         return;
@@ -38,3 +39,4 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 });
+

@@ -1,13 +1,18 @@
 // docs/common/core.js
 
+
 /**
  * Return a CSS class name for a score pill.
+ * One-to-one with the logical score categories.
  */
 export function pillClass(score) {
-  if (score >= 80) return "pill good";
-  if (score >= 50) return "pill ok";
-  return "pill bad";
+  if (score >= 90) return "pill excellent";
+  if (score >= 60) return "pill good";
+  if (score >= 40) return "pill ok";
+  if (score >= 20) return "pill poor";
+  return "pill avoid";
 }
+
 
 /**
  * Load the selected location from storage.
