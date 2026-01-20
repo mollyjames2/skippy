@@ -8,7 +8,7 @@ export const SKIPPY_FORECAST_DAYS = 7;
 
 // Bump this when the request spec / bundle shape changes
 // so cached bundles refresh automatically.
-export const SKIPPY_BUNDLE_VERSION = 3;
+export const SKIPPY_BUNDLE_VERSION = 4;
 
 export const OPEN_METEO = {
   weather: {
@@ -47,13 +47,18 @@ export const OPEN_METEO = {
       "wave_direction",
       "wave_period",
 
-      // NEW: modelled sea level including tides
+      // modelled sea level including tides
       "sea_level_height_msl",
     ],
     daily: [
       "wave_height_max",
       "wave_direction_dominant",
       "wave_period_max",
+    ],
+
+    // NEW: 15-minute series (where available; elsewhere may be interpolated)
+    minutely_15: [
+      "sea_level_height_msl",
     ],
   },
 };
@@ -73,16 +78,21 @@ export function buildOpenMeteoUrl(type, { lat, lon }) {
   u.searchParams.set("forecast_days", String(SKIPPY_FORECAST_DAYS));
 
   // Always request BOTH layers (daily + hourly)
-  u.searchParams.set("hourly", cfg.hourly.join(","));
-  u.searchParams.set("daily", cfg.daily.join(","));
+  if (cfg.hourly && cfg.hourly.length) u.searchParams.set("hourly", cfg.hourly.join(","));
+  if (cfg.daily && cfg.daily.length) u.searchParams.set("daily", cfg.daily.join(","));
+
+  // Optional 15-min layer (marine only)
+  if (cfg.minutely_15 && cfg.minutely_15.length) {
+    u.searchParams.set("minutely_15", cfg.minutely_15.join(","));
+  }
 
   return u.toString();
 }
 
 /**
  * Canonical bundle wrapper shape.
- * Tides will later be DERIVED client-side from
- * marine.hourly.sea_level_height_msl
+ * Tides are DERIVED client-side from marine sea level
+ * (hourly, optionally refined with minutely_15)
  */
 export function makeBundleEnvelope({ slug, place, weather, marine }) {
   return {

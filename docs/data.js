@@ -310,9 +310,9 @@ function detectExtremaPlateauAware(times, levels) {
 }
 
 function tidesForDay(bundle, dayIso) {
-  const mHourly = (bundle && bundle.marine && bundle.marine.hourly) ? bundle.marine.hourly : {};
-  const times = mHourly.time || [];
-  const levels = mHourly.sea_level_height_msl || [];
+  const mMinutely_15 = (bundle && bundle.marine && bundle.marine.minutely_15) ? bundle.marine.minutely_15 : {};
+  const times = mMinutely_15.time || [];
+  const levels = mMinutely_15.sea_level_height_msl || [];
   if (!times.length || times.length !== levels.length) return [];
 
   const events = detectExtremaPlateauAware(times, levels);
