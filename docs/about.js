@@ -1,5 +1,7 @@
 "use strict";
 
+// Updated: 2026-01-20
+
 function byId(id) {
   return document.getElementById(id);
 }
@@ -18,11 +20,14 @@ document.addEventListener("DOMContentLoaded", function () {
   var backBtn = byId("backBtn");
   if (backBtn) {
     backBtn.addEventListener("click", function () {
-      if (from === "settings") {
-        window.location.href = "./settings.html";
-      } else {
-        window.location.href = "./index.html";
+      // Prefer browser history (feels natural on mobile), with safe fallbacks.
+      if (window.history && window.history.length > 1) {
+        window.history.back();
+        return;
       }
+
+      if (from === "settings") window.location.href = "./settings.html";
+      else window.location.href = "./index.html";
     });
   }
 

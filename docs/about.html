@@ -1,4 +1,5 @@
 <!doctype html>
+<!-- Updated: 2026-01-20 -->
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -19,37 +20,47 @@
       <div class="card">
         <div style="font-weight:800; margin-bottom:6px;">What Skippy does</div>
         <div class="muted small">
-          Skippy helps recreational boaters in South West England decide when it
-          is safe and enjoyable to go boating.
+          Skippy gives boaters a <b>quick, at-a-glance</b> view of upcoming
+          conditions for familiar coastal spots in the South West UK.
           <br /><br />
-          We analyze wind, waves, tides, visibility, and daylight to produce
-          an overall Boating Score and recommended time windows.
+          It’s designed to answer the first question quickly:
+          <br />
+          <b>“Is it worth going out (or planning a trip)?”</b>
+          <br /><br />
+          Skippy pulls together wind, waves, precipitation, visibility and
+          daylight into a simple <b>Boating Score</b>, with a week view for
+          scanning ahead and a day view for the detail.
         </div>
       </div>
 
       <div class="spacer"></div>
 
       <div class="card">
-        <div style="font-weight:800; margin-bottom:6px;">Understanding the ratings</div>
+        <div style="font-weight:800; margin-bottom:6px;">Understanding the score</div>
 
         <div class="row">
           <div class="pill excellent">80+</div>
-          <div class="muted small">Excellent - Ideal conditions</div>
+          <div class="muted small">Excellent - Great for most boating</div>
         </div>
 
         <div class="row">
           <div class="pill good">60+</div>
-          <div class="muted small">Good - Suitable for most boats</div>
+          <div class="muted small">Good - Generally manageable</div>
         </div>
 
         <div class="row">
           <div class="pill fair">40+</div>
-          <div class="muted small">Fair - Experienced skippers only</div>
+          <div class="muted small">Fair - More effort / less comfort</div>
         </div>
 
         <div class="row">
           <div class="pill poor">&lt;40</div>
-          <div class="muted small">Poor / Avoid - Not recommended</div>
+          <div class="muted small">Poor - Think twice / consider alternatives</div>
+        </div>
+
+        <div class="muted small" style="margin-top:10px;">
+          The score is a <b>helpful shortcut</b>, not a guarantee.
+          Always use your judgment and check official forecasts.
         </div>
       </div>
 
@@ -59,10 +70,35 @@
         <div style="font-weight:800; margin-bottom:6px;">Factors we consider</div>
 
         <div class="muted small">
-          <b>Wind:</b> Strong winds increase difficulty and risk.<br />
-          <b>Waves:</b> Higher waves reduce comfort and safety.<br />
-          <b>Tides:</b> Access may be limited around high and low water.<br />
-          <b>Visibility:</b> Fog and haze increase collision risk.
+          <b>Wind:</b> Stronger winds (and gusts) usually mean harder boating.<br />
+          <b>Waves:</b> Bigger seas reduce comfort and increase risk.<br />
+          <b>Rain:</b> Often less pleasant, and can reduce visibility.<br />
+          <b>Visibility:</b> Fog / haze can make navigation and lookout harder.<br />
+          <b>Daylight:</b> Sunrise/sunset helps you plan around light.
+        </div>
+      </div>
+
+      <div class="spacer"></div>
+
+      <div class="card">
+        <div style="font-weight:800; margin-bottom:6px;">Tides</div>
+        <div class="muted small">
+          Where available, Skippy shows <b>modelled tide events</b> (high/low)
+          based on the underlying sea level curve.
+          <br /><br />
+          Treat this as a handy guide rather than a harbour-master source.
+        </div>
+      </div>
+
+      <div class="spacer"></div>
+
+      <div class="card">
+        <div style="font-weight:800; margin-bottom:6px;">Data & privacy</div>
+        <div class="muted small">
+          Skippy uses the <b>Open-Meteo</b> weather + marine models.
+          There are <b>no accounts</b> and <b>no tracking</b> built into the app.
+          <br /><br />
+          Your settings and presets are stored locally in your browser.
         </div>
       </div>
 
@@ -85,6 +121,12 @@
         <div class="muted small">
           Skippy is an open source project.
           <br /><br />
+          Live app:
+          <br />
+          <a class="link" href="https://mollyjames2.github.io/skippy/" target="_blank" rel="noopener">
+            mollyjames2.github.io/skippy
+          </a>
+          <br /><br />
           View the source code on GitHub:
           <br />
           <a class="link" href="https://github.com/mollyjames2/skippy" target="_blank" rel="noopener">
@@ -101,3 +143,4 @@
     <script src="./about.js"></script>
   </body>
 </html>
+

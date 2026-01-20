@@ -1,260 +1,149 @@
+# Skippy
 
+https://mollyjames2.github.io/skippy/
 
-# Skippy 
+Skippy is a small, fast **boating conditions web app** designed to answer one simple question quickly:
 
-Skippy is a lightweight **boating conditions web app** built with:
-- a **static frontend** hosted on GitHub Pages
-- a **Cloudflare Worker API** used as a fallback data source
+> **“Is it a good time to go out on the water?”**
 
-The app helps boaters quickly assess conditions by showing:
-- a **weekly overview** of boating conditions for a selected location
-- a **daily detail view** for a specific date
-- a simple **location picker** backed by predefined coastal / marine locations
-The core design goal is:
-> **Frontend-first data loading**, with **Worker fallback**, and **minimal moving parts**.
+It runs entirely in the browser, with an optional Cloudflare Worker API as a fallback data source. There’s no framework, no build step, and very little magic.
 
 ---
 
-## High-level architecture
+## What Skippy does
 
-```
+Skippy helps boaters check upcoming conditions for familiar coastal locations.
 
-Browser (GitHub Pages)
-│
-├── Fetch Open-Meteo APIs directly (primary)
-│   ├── Weather API
-│   └── Marine API
-│
-├── Cache computed results in localStorage (1 hour TTL)
-│
-└── Fallback to Cloudflare Worker
-└── Worker fetches Open-Meteo and returns same JSON schema
+### At a glance
 
-```
-
-The UI does **not** care where data comes from — browser or Worker — because the JSON contract is the same.
+* **Weekly overview** of marine and weather conditions for a selected location
+* **Daily detail view** with a deeper breakdown for a specific date
+* **Quick location switching** using predefined marine / coastal spots
+* **User settings & presets** to tailor how conditions are interpreted
+* **Fast loading** thanks to frontend-first data handling and aggressive caching
 
 ---
 
-## Repository structure
+## How it works
 
-```
+Skippy is intentionally simple in how data flows through the app:
 
-.
-├── docs/                  # Static frontend (GitHub Pages root)
-│   ├── index.html          # Home / week view
-│   ├── day.html            # Day detail view
-│   ├── location.html       # Location picker
-│   │
-│   ├── app.js              # Week view logic (ES module)
-│   ├── day.js              # Day view logic (ES module)
-│   ├── location.js         # Location picker logic (ES module)
-│   ├── presets.js          # Location presets UI
-│   ├── data.js             # Frontend data layer (Open-Meteo + cache + fallback)
-│   │
-│   ├── config.js           # Runtime configuration (API base, defaults)
-│   │
-│   └── common/
-│       └── core.js         # Shared browser-only helpers
-│
-├── shared/
-│   └── places.js           # Single source of truth for locations (lat/lon)
-│
-└── worker/
-└── worker.js           # Cloudflare Worker API (fallback data source)
-
-```
-
----
-
-## Key concepts
-
-### 1. Locations (single source of truth)
-
-All locations live in **one file**:
-
-```
-
-shared/places.js
-
-````
-
-Each place defines:
-- `slug`
-- `name`
-- `lat`
-- `lon`
-
-This file is imported by:
-- the frontend (for data loading)
-- the Worker (for fallback fetching)
-
-There is **no duplication** of location data.
-
----
-
-### 2. Frontend-first data loading (`docs/data.js`)
-
-The frontend uses a small data layer that hides all complexity from the UI.
-
-Public API:
-
-```js
-getWeekData(slug)
-getDayData(slug, dayIso)
-````
-
-What happens internally:
-
-1. **Cache check**
-
-   * Uses `localStorage`
-   * TTL = **1 hour**
-   * If fresh data exists → return immediately
-
-2. **Direct Open-Meteo fetch**
-
-   * Weather API
-   * Marine API
-   * Data is mapped into the same JSON shape the UI already expects
-
-3. **Worker fallback**
-
-   * If Open-Meteo fails (network, rate limit, etc.)
-   * Calls existing Worker endpoints
-   * Worker JSON contract is unchanged
-
-The UI never needs to know which path was used.
-
----
-
-### 3. Cloudflare Worker (fallback only)
+1. The **static frontend** (HTML, CSS, vanilla JS) is hosted on GitHub Pages
+2. The frontend requests raw weather + marine data
+3. A **Cloudflare Worker API** acts as a fallback and cache layer
+4. Data ultimately comes from **Open‑Meteo** (no accounts or API keys required)
 
 The Worker:
 
-* fetches Open-Meteo weather + marine data
-* computes scores
-* returns JSON for:
+* Fetches weather + marine data from Open‑Meteo
+* Returns **raw, unopinionated JSON**
+* Caches responses at the edge for 1 hour
 
-  * `/week`
-  * `/day`
-
-Important:
-
-* The Worker API contract is **unchanged**
-* The Worker is no longer the primary data source
-* It exists purely for resilience and backward compatibility
+All interpretation, display logic, and user preferences live in the frontend.
 
 ---
 
-### 4. Frontend modules and shared helpers
+## Pages & features
 
-All main frontend scripts are ES modules.
+* **Home / Week view**
 
-Shared browser-only helpers live in:
+  * Overview of the next 7 days for a location
+  * Clear visual indicators for conditions
 
-```
-docs/common/core.js
-```
+* **Day view**
 
-This includes:
+  * Detailed breakdown for a single day
+  * Designed for quick decision‑making
 
-* `pillClass(score)` – maps scores to CSS classes
-* `requireLocationOrRedirect()` – ensures a location is selected
+* **Location picker**
 
-These helpers:
+  * Uses a shared, predefined list of coastal locations
+  * One source of truth across frontend and Worker
 
-* use browser APIs (`window`, `localStorage`)
-* are shared across pages
-* are intentionally **not** placed in `shared/`
+* **Settings**
 
----
+  * Customize how conditions are evaluated
+  * Saved locally in the browser
 
-### 5. Configuration
+* **Presets**
 
-Runtime configuration lives in:
-
-```
-docs/config.js
-```
-
-This file defines globals such as:
-
-* `SKIPPY_API_BASE`
-* default location settings
-
-Because the main scripts are ES modules, config values are accessed via:
-
-```js
-window.SKIPPY_API_BASE
-```
+  * Quickly switch between different condition preferences
 
 ---
 
-## Data flow summary
+## Design goals
 
-### Week view (`index.html`)
+Skippy is intentionally opinionated about simplicity:
 
-1. Load selected location from storage
-2. Call `getWeekData(slug)`
-3. Render weekly cards
-4. Each day links to `day.html?date=YYYY-MM-DD`
-
-### Day view (`day.html`)
-
-1. Load selected location
-2. Read date from URL
-3. Call `getDayData(slug, date)`
-4. Render detailed conditions for the day
+* **No framework**
+* **No build step**
+* **Minimal abstraction**
+* **Explicit data flow**
+* **Frontend‑first loading** with API fallback
+* **UI decoupled from the data source**
+* **Easy to inspect, debug, and extend**
 
 ---
 
-## Caching behavior
+## Project structure
 
-* Cache keys include:
-
-  * view type (`week` / `day`)
-  * location slug
-  * date (for day view)
-* TTL = **1 hour**
-* Cache is automatically refreshed after expiry
-* Cache is updated even when data comes from the Worker
+* `docs/` – Static frontend (HTML, CSS, JS)
+* `worker/` – Cloudflare Worker API
+* `docs/shared/` – Shared specs and location data used by both frontend and Worker
+* `legacy/` – Older experiments and retired code
 
 ---
 
-## Development
+## Running locally
 
-### Frontend
-
-Serve the `docs/` directory locally, e.g.:
+You can open the frontend directly:
 
 ```bash
-python -m http.server
+# from the repo root
+open docs/index.html
 ```
 
-### Worker
-
-Use Cloudflare Wrangler:
+For the API:
 
 ```bash
+cd worker
 wrangler dev
 ```
 
-You can point `SKIPPY_API_BASE` in `config.js` to:
-
-* local Worker (for development)
-* deployed Worker (for production)
+Then point the frontend config at your local Worker if needed.
 
 ---
 
-## Design principles
+## Philosophy
 
-* No framework
-* No build step
-* Minimal abstraction
-* Explicit data flow
-* One source of truth for locations
-* UI decoupled from data source
+Skippy exists to give boaters a fast, at‑a‑glance sense of whether conditions are worth thinking about further.
+
+It’s not trying to replace forecasts, charts, or local knowledge. Instead, it’s meant to answer the first, most common question:
+
+“Is this even worth considering today?”
+
+The app is designed for quick checks — on a phone, before loading the car, or while scanning options — without digging through dense weather tools.
+
+To support that goal, Skippy favors:
+
+-Clear signals over exhaustive detail
+
+-Familiar locations over free‑form searching
+
+-Sensible defaults with optional customization
+
+-Speed and clarity over completeness
+
+-Under the hood, the same philosophy applies:
+
+-Readable code over clever code
+
+-Fewer moving parts over heavy abstractions
+
+-Shipping something genuinely useful over building a platform
+
+If Skippy helps you decide whether to go deeper elsewhere, it’s doing its job.
+
 
 ---
 
