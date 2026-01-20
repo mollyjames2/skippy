@@ -1,7 +1,7 @@
 "use strict";
 
 import { pillClass, getSavedLocation } from "./common/core.js";
-import { getWeekData } from "./data.js";
+import { getWeekData, getDayData } from "./data.js";
 
 function setText(id, text) {
   var el = document.getElementById(id);
@@ -27,6 +27,172 @@ function wireHomeTopbar() {
     });
   }
 }
+
+/* ---------------------------------------------
+   London time helpers
+--------------------------------------------- */
+
+function todayIsoLondon() {
+  var parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/London",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).formatToParts(new Date());
+
+  var y = (parts.find(function (p) { return p.type === "year"; }) || {}).value;
+  var m = (parts.find(function (p) { return p.type === "month"; }) || {}).value;
+  var d = (parts.find(function (p) { return p.type === "day"; }) || {}).value;
+
+  return String(y) + "-" + String(m) + "-" + String(d);
+}
+
+function formatUpdatedAtLondon(iso) {
+  if (!iso) return "";
+  var d = new Date(iso);
+  if (isNaN(d.getTime())) return "";
+
+  return new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/London",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(d);
+}
+
+/* ---------------------------------------------
+   Tide card helpers
+--------------------------------------------- */
+
+function minsUntilHHMM(hhmm) {
+  if (!hhmm || typeof hhmm !== "string") return null;
+
+  var parts = hhmm.split(":");
+  if (parts.length !== 2) return null;
+
+  var h = Number(parts[0]);
+  var m = Number(parts[1]);
+  if (!isFinite(h) || !isFinite(m)) return null;
+
+  var now = new Date();
+  var t = new Date(now);
+  t.setHours(h, m, 0, 0);
+
+  // If time already passed today, treat it as next day
+  if (t.getTime() < now.getTime()) t.setDate(t.getDate() + 1);
+
+  return Math.round((t.getTime() - now.getTime()) / 60000);
+}
+
+function formatMins(mins) {
+  if (mins == null || !isFinite(mins)) return "—";
+  if (mins < 60) return mins + " min";
+  var h = Math.floor(mins / 60);
+  var m = mins % 60;
+  return h + "h " + String(m).padStart(2, "0") + "m";
+}
+
+function findNextTideEvent(events) {
+  var best = null;
+  (events || []).forEach(function (e) {
+    if (!e || !e.time) return;
+    var mins = minsUntilHHMM(e.time);
+    if (mins == null) return;
+    if (best == null || mins < best.mins) {
+      best = {
+        type: e.type || "—",
+        time: e.time,
+        height_m: e.height_m,
+        mins: mins,
+      };
+    }
+  });
+  return best;
+}
+
+function renderTodayTidesCard(dayData) {
+  var tides = (dayData && dayData.tides) ? dayData.tides : [];
+  var meta = (dayData && dayData.tides_meta) ? dayData.tides_meta : null;
+
+  // Title line (optionally show station name)
+  var stationName = meta && meta.station && meta.station.name ? meta.station.name : "";
+  var title = "Today’s tides" + (stationName ? " (" + stationName + ")" : "");
+
+  var next = findNextTideEvent(tides);
+
+  // Footer / caveat message
+  var footer = "";
+  if (meta && meta.source === "tidetimes") {
+    var t = formatUpdatedAtLondon(meta.updated_at);
+    footer = "Data accessed from Tide Times" + (t ? " · last updated " + t : "");
+  } else {
+    // Model fallback / none
+    footer =
+      (meta && meta.message)
+        ? meta.message
+        : "High accuracy tidal data not available — using 15 minute modelled tide predictions";
+  }
+
+  // Render events (up to 4 typical)
+  var lines = "";
+  if (tides && tides.length) {
+    lines = tides
+      .slice(0, 6)
+      .map(function (e) {
+        var hm = (e.height_m != null && isFinite(Number(e.height_m)))
+          ? " (" + Number(e.height_m).toFixed(2).replace(/\.00$/, "") + "m)"
+          : "";
+        return (
+          '<div class="muted small">' +
+          (e.type || "—") +
+          " Tide: <b>" +
+          (e.time || "—") +
+          "</b>" +
+          hm +
+          "</div>"
+        );
+      })
+      .join("");
+  } else {
+    lines = '<div class="muted small">No tide data available.</div>';
+  }
+
+  var nextLine = "";
+  if (next) {
+    nextLine =
+      '<div class="row">' +
+      '  <div>' +
+      '    <div style="font-weight:800; font-size:18px;">Next: ' +
+      (next.type || "—") +
+      ' tide</div>' +
+      '    <div class="muted small">In ' +
+      formatMins(next.mins) +
+      " · at <b>" +
+      next.time +
+      "</b></div>" +
+      "  </div>" +
+      "</div>" +
+      '<div class="spacer"></div>';
+  } else {
+    nextLine =
+      '<div class="muted small">Next tide: —</div>' +
+      '<div class="spacer"></div>';
+  }
+
+  setHtml(
+    "tideCard",
+    "" +
+      '<div class="muted small">' + title + "</div>" +
+      '<div class="spacer"></div>' +
+      nextLine +
+      lines +
+      '<div class="spacer"></div>' +
+      '<div class="muted small">' + footer + "</div>"
+  );
+}
+
+/* ---------------------------------------------
+   Existing UI code
+--------------------------------------------- */
 
 function showToast(message) {
   if (!message) return;
@@ -123,7 +289,6 @@ function renderWeek(data, loc) {
     card.className = "card";
     card.href = href;
 
-    // Defensive (prevents crashes if any field is missing)
     var windKts = d.wind && d.wind.kts != null ? d.wind.kts : 0;
     var windDir = d.wind && d.wind.dir ? d.wind.dir : "—";
     var waveM = d.waves && d.waves.m != null ? d.waves.m : 0;
@@ -218,6 +383,16 @@ async function main() {
     setText("location", "No location selected");
 
     setHtml(
+      "tideCard",
+      "" +
+        '<div class="muted small">Today’s tides</div>' +
+        '<div class="spacer"></div>' +
+        '<div class="muted small">Choose a location to see today’s tides.</div>' +
+        '<div class="spacer"></div>' +
+        '<a class="btn" href="./location.html">Choose location</a>'
+    );
+
+    setHtml(
       "bestCard",
       "" +
         '<div class="muted small">Choose your location to see the best boating days this week.</div>' +
@@ -235,6 +410,22 @@ async function main() {
     return;
   }
 
+  // Load Today tides first (fast perceived value)
+  try {
+    var todayIso = todayIsoLondon();
+    var todayData = await getDayData(loc.slug, todayIso);
+    renderTodayTidesCard(todayData);
+  } catch (e) {
+    setHtml(
+      "tideCard",
+      "" +
+        '<div class="muted small">Today’s tides</div>' +
+        '<div class="spacer"></div>' +
+        '<div class="muted small">Unable to load tides right now.</div>'
+    );
+  }
+
+  // Then load week
   try {
     var data = await getWeekData(loc.slug);
     renderWeek(data, loc);
