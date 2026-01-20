@@ -1,7 +1,11 @@
 // docs/data.js
 
 import { SKIPPY_PLACES } from "./shared/places.js";
-import { buildOpenMeteoUrl, makeBundleEnvelope } from "./shared/openmeteoSpec.js";
+import {
+  buildOpenMeteoUrl,
+  makeBundleEnvelope,
+  SKIPPY_BUNDLE_VERSION,
+} from "./shared/openmeteoSpec.js";
 
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
@@ -10,7 +14,8 @@ const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 -------------------------------------------------- */
 
 function bundleCacheKey(slug) {
-  return "skippy.cache.bundle." + slug;
+  // Include bundle version so old cached bundles don’t keep missing new fields.
+  return "skippy.cache.bundle.v" + String(SKIPPY_BUNDLE_VERSION) + "." + slug;
 }
 
 function readCache(key) {
@@ -20,6 +25,10 @@ function readCache(key) {
     const parsed = JSON.parse(raw);
     const ts = parsed.ts;
     const data = parsed.data;
+
+    // Invalidate if cached bundle was created with an older contract/spec.
+    if (!data || data.v !== SKIPPY_BUNDLE_VERSION) return null;
+
     if (Date.now() - ts > CACHE_TTL_MS) return null;
     return data;
   } catch (e) {
@@ -74,9 +83,7 @@ async function fetchBundleFromUpstream(place) {
   const weatherUrl = buildOpenMeteoUrl("weather", { lat: place.lat, lon: place.lon });
   const marineUrl = buildOpenMeteoUrl("marine", { lat: place.lat, lon: place.lon });
 
-  const results = await Promise.all([fetchJson(weatherUrl), fetchJson(marineUrl)]);
-  const weather = results[0];
-  const marine = results[1];
+  const [weather, marine] = await Promise.all([fetchJson(weatherUrl), fetchJson(marineUrl)]);
 
   return makeBundleEnvelope({
     slug: place.slug,
@@ -121,10 +128,6 @@ export async function getBundle(slug) {
    UI-shape helpers
 -------------------------------------------------- */
 
-function kmhToKnots(kmh) {
-  return Math.round((kmh || 0) * 0.539957);
-}
-
 function weatherCodeToText(code) {
   if (code === 0) return "Clear";
   if (code === 1 || code === 2) return "Mostly clear";
@@ -135,6 +138,17 @@ function weatherCodeToText(code) {
   if (code >= 80 && code <= 82) return "Showers";
   if (code >= 95) return "Thunder";
   return "Mixed";
+}
+
+function degToCompass(deg) {
+  const n = Number(deg);
+  if (!isFinite(n)) return "-";
+  const dirs = [
+    "N","NNE","NE","ENE","E","ESE","SE","SSE",
+    "S","SSW","SW","WSW","W","WNW","NW","NNW",
+  ];
+  const idx = Math.round(((n % 360) / 22.5)) % 16;
+  return dirs[idx];
 }
 
 function scoreToRating(score) {
@@ -171,6 +185,12 @@ function kmhToKnotsFloat(kmh) {
   return n * 0.539957;
 }
 
+function kmhToKnotsInt(kmh) {
+  const k = kmhToKnotsFloat(kmh);
+  if (k == null) return 0;
+  return Math.round(k);
+}
+
 function scoreHourPlaceholder(opts) {
   const wave = Number(opts.wave_m);
   const wind = Number(opts.wind_kmh);
@@ -182,8 +202,26 @@ function scoreHourPlaceholder(opts) {
   return Math.round(clamp(s, 0, 100));
 }
 
+function summarizeVisibilityKmForDay(dayIso, wHourly) {
+  const times = (wHourly && wHourly.time) ? wHourly.time : [];
+  const visM = (wHourly && wHourly.visibility) ? wHourly.visibility : [];
+
+  // Conservative: show worst (minimum) visibility across the day.
+  let minM = null;
+  for (let i = 0; i < times.length; i++) {
+    const t = String(times[i] || "");
+    if (t.slice(0, 10) !== dayIso) continue;
+    const v = Number(visM[i]);
+    if (!isFinite(v)) continue;
+    if (minM === null || v < minM) minM = v;
+  }
+
+  if (minM === null) return null;
+  return minM / 1000;
+}
+
 /* --------------------------------------------------
-   Week builder (from bundle daily layers)
+   Week builder (from bundle daily layers only)
 -------------------------------------------------- */
 
 function buildWeekPayloadFromBundle(bundle, place) {
@@ -197,12 +235,13 @@ function buildWeekPayloadFromBundle(bundle, place) {
   const waveMax = mDaily.wave_height_max || [];
   const windMaxKmh = wDaily.wind_speed_10m_max || [];
 
-  const days = times.map(function (date, i) {
-    const wave = (typeof waveMax[i] !== "undefined" && waveMax[i] !== null) ? waveMax[i] : 0;
-    const windKmh = (typeof windMaxKmh[i] !== "undefined" && windMaxKmh[i] !== null) ? windMaxKmh[i] : 0;
+  // DAILY: dominant wind direction (10m)
+  const windDirDom = wDaily.wind_direction_10m_dominant || [];
 
-    const scoreRaw = 100 - wave * 20 - windKmh;
-    const score = Math.max(0, Math.round(scoreRaw));
+  const days = times.map(function (date, i) {
+    const wave = (waveMax[i] ?? 0);
+    const windKmh = (windMaxKmh[i] ?? 0);
+    const score = scoreHourPlaceholder({ wave_m: wave, wind_kmh: windKmh });
 
     return {
       date: date,
@@ -210,18 +249,18 @@ function buildWeekPayloadFromBundle(bundle, place) {
       label: formatLabel(date),
 
       condition: weatherCodeToText(codes[i]),
-      temp_c: Math.round((typeof tmax[i] !== "undefined" && tmax[i] !== null) ? tmax[i] : 0),
+      temp_c: Math.round(tmax[i] ?? 0),
 
       score: score,
       rating: scoreToRating(score),
 
       wind: {
-        kts: kmhToKnots(windKmh),
-        dir: "-",
+        kts: kmhToKnotsInt(windKmh),
+        dir: degToCompass(windDirDom[i]),
       },
 
       waves: {
-        m: Number(Number(wave).toFixed(1)),
+        m: round1(wave),
       },
 
       best_time: { start: "All day", end: "All day" },
@@ -249,7 +288,7 @@ function buildWeekPayloadFromBundle(bundle, place) {
 }
 
 /* --------------------------------------------------
-   Day builder (daily summary + hourly rows from bundle)
+   Day builder (daily summary + hourly rows)
 -------------------------------------------------- */
 
 function buildDayPayloadFromBundle(bundle, place, dayIso) {
@@ -267,6 +306,9 @@ function buildDayPayloadFromBundle(bundle, place, dayIso) {
   const windMaxKmh = (wDaily.wind_speed_10m_max || [])[dayIdx];
   const gustMaxKmh = (wDaily.wind_gusts_10m_max || [])[dayIdx];
 
+  // DAILY: dominant wind direction (10m)
+  const windDirDom = (wDaily.wind_direction_10m_dominant || [])[dayIdx];
+
   const precipSum = (wDaily.precipitation_sum || [])[dayIdx];
 
   const sunrise = (wDaily.sunrise || [])[dayIdx];
@@ -281,9 +323,12 @@ function buildDayPayloadFromBundle(bundle, place, dayIso) {
   const wHourly = (bundle && bundle.weather && bundle.weather.hourly) ? bundle.weather.hourly : {};
   const mHourly = (bundle && bundle.marine && bundle.marine.hourly) ? bundle.marine.hourly : {};
 
+  // HOURLY: visibility is hourly-driven
+  const visKm = summarizeVisibilityKmForDay(dayIso, wHourly);
+
+  // Align marine to weather timestamps
   const wTimes = wHourly.time || [];
   const mTimes = mHourly.time || [];
-
   const marineIndexByTime = {};
   for (let i = 0; i < mTimes.length; i++) marineIndexByTime[mTimes[i]] = i;
 
@@ -293,16 +338,37 @@ function buildDayPayloadFromBundle(bundle, place, dayIso) {
     if (t.slice(0, 10) !== dayIso) continue;
 
     const j = marineIndexByTime[t];
+
+    const tempC = (wHourly.temperature_2m || [])[i];
+    const codeH = (wHourly.weather_code || [])[i];
+
     const windKmhH = (wHourly.wind_speed_10m || [])[i];
+    const windDirDegH = (wHourly.wind_direction_10m || [])[i];
+    const gustKmhH = (wHourly.wind_gusts_10m || [])[i];
+
+    const precipMmH = (wHourly.precipitation || [])[i];
+    const visMH = (wHourly.visibility || [])[i];
+
     const waveMH = (j != null && mHourly.wave_height) ? mHourly.wave_height[j] : null;
+    const wavePeriodH = (j != null && mHourly.wave_period) ? mHourly.wave_period[j] : null;
 
     const score = scoreHourPlaceholder({ wave_m: waveMH || 0, wind_kmh: windKmhH || 0 });
 
     hours.push({
       time: t.slice(11, 16),
-      temp_c: round1((wHourly.temperature_2m || [])[i]),
-      wind_kts: Math.round(kmhToKnotsFloat(windKmhH) || 0),
+      temp_c: round1(tempC),
+      condition: weatherCodeToText(codeH),
+
+      wind_kts: kmhToKnotsInt(windKmhH),
+      wind_dir: degToCompass(windDirDegH),
+      gust_kts: kmhToKnotsInt(gustKmhH),
+
       wave_m: round1(waveMH || 0),
+      wave_period_s: round1(wavePeriodH || 0),
+
+      precip_mm: round1(precipMmH || 0),
+      visibility_km: isFinite(Number(visMH)) ? round1(Number(visMH) / 1000) : null,
+
       score: score,
     });
   }
@@ -325,14 +391,18 @@ function buildDayPayloadFromBundle(bundle, place, dayIso) {
     },
 
     tiles: {
-      wind_kts: Math.round(kmhToKnotsFloat(windMaxKmh) || 0),
-      gust_kts: Math.round(kmhToKnotsFloat(gustMaxKmh) || 0),
-      wind_dir: "-",
+      wind_kts: kmhToKnotsInt(windMaxKmh),
+      gust_kts: kmhToKnotsInt(gustMaxKmh),
+
+      // DAILY
+      wind_dir: degToCompass(windDirDom),
 
       wave_m: round1(waveMax || 0),
       period_s: round1(wavePeriodMax || 0),
 
-      visibility_km: "-",
+      // HOURLY-derived daily summary
+      visibility_km: visKm == null ? "-" : round1(visKm),
+
       precip_mm: round1(precipSum || 0),
 
       sunrise: sunrise ? String(sunrise).slice(11, 16) : "-",

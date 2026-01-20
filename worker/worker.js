@@ -117,15 +117,13 @@ async function buildBundle(params) {
   const weatherUrl = buildOpenMeteoUrl("weather", { lat: place.lat, lon: place.lon });
   const marineUrl = buildOpenMeteoUrl("marine", { lat: place.lat, lon: place.lon });
 
-  const results = await Promise.all([fetchJson(weatherUrl), fetchJson(marineUrl)]);
-  const weather = results[0];
-  const marine = results[1];
+  const [weather, marine] = await Promise.all([fetchJson(weatherUrl), fetchJson(marineUrl)]);
 
   // Return raw upstream payloads + metadata (no scoring, no shaping)
   return makeBundleEnvelope({
-    slug: place.slug || String(slug || "").trim(),
-    place: place,
-    weather: weather,
-    marine: marine,
+    slug: place.slug,
+    place,
+    weather,
+    marine,
   });
 }

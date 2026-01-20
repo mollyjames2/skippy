@@ -6,6 +6,10 @@
 export const SKIPPY_TIMEZONE = "Europe/London";
 export const SKIPPY_FORECAST_DAYS = 7;
 
+// Bump this when the bundle contract or request spec changes in a way that
+// should invalidate cached bundles in the browser.
+export const SKIPPY_BUNDLE_VERSION = 2;
+
 export const OPEN_METEO = {
   weather: {
     baseUrl: "https://api.open-meteo.com/v1/forecast",
@@ -28,6 +32,10 @@ export const OPEN_METEO = {
       "temperature_2m_min",
       "wind_speed_10m_max",
       "wind_gusts_10m_max",
+
+      // IMPORTANT: Home/Week wind direction must come from DAILY directly.
+      "wind_direction_10m_dominant",
+
       "precipitation_sum",
       "precipitation_probability_max",
       "sunrise",
@@ -60,19 +68,16 @@ export function buildOpenMeteoUrl(type, { lat, lon }) {
   u.searchParams.set("hourly", cfg.hourly.join(","));
   u.searchParams.set("daily", cfg.daily.join(","));
 
-  // We intentionally do NOT set units yet (keep defaults for minimal disruption).
-  // If we change units later, we must change them everywhere (browser + Worker).
-
   return u.toString();
 }
 
 /**
- * Canonical bundle wrapper shape (for docs/tests/consistency).
- * Actual bundle is raw upstream + these metadata fields.
+ * Canonical bundle wrapper shape.
+ * Bundle returns raw upstream + these metadata fields.
  */
 export function makeBundleEnvelope({ slug, place, weather, marine }) {
   return {
-    v: 1,
+    v: SKIPPY_BUNDLE_VERSION,
     slug,
     place,
     timezone: SKIPPY_TIMEZONE,
@@ -82,4 +87,3 @@ export function makeBundleEnvelope({ slug, place, weather, marine }) {
     tides: null,
   };
 }
-
