@@ -6,9 +6,9 @@
 export const SKIPPY_TIMEZONE = "Europe/London";
 export const SKIPPY_FORECAST_DAYS = 7;
 
-// Bump this when the request spec / bundle shape changes and you want
-// browser caches to refresh immediately.
-export const SKIPPY_BUNDLE_VERSION = 2;
+// Bump this when the request spec / bundle shape changes
+// so cached bundles refresh automatically.
+export const SKIPPY_BUNDLE_VERSION = 3;
 
 export const OPEN_METEO = {
   weather: {
@@ -32,10 +32,7 @@ export const OPEN_METEO = {
       "temperature_2m_min",
       "wind_speed_10m_max",
       "wind_gusts_10m_max",
-
-      // Daily wind direction for Home/Week/Day tiles (daily-driven)
       "wind_direction_10m_dominant",
-
       "precipitation_sum",
       "precipitation_probability_max",
       "sunrise",
@@ -45,8 +42,19 @@ export const OPEN_METEO = {
 
   marine: {
     baseUrl: "https://marine-api.open-meteo.com/v1/marine",
-    hourly: ["wave_height", "wave_direction", "wave_period"],
-    daily: ["wave_height_max", "wave_direction_dominant", "wave_period_max"],
+    hourly: [
+      "wave_height",
+      "wave_direction",
+      "wave_period",
+
+      // NEW: modelled sea level including tides
+      "sea_level_height_msl",
+    ],
+    daily: [
+      "wave_height_max",
+      "wave_direction_dominant",
+      "wave_period_max",
+    ],
   },
 };
 
@@ -64,7 +72,7 @@ export function buildOpenMeteoUrl(type, { lat, lon }) {
   u.searchParams.set("timezone", SKIPPY_TIMEZONE);
   u.searchParams.set("forecast_days", String(SKIPPY_FORECAST_DAYS));
 
-  // Always request BOTH layers (daily + hourly) per Skippy rules.
+  // Always request BOTH layers (daily + hourly)
   u.searchParams.set("hourly", cfg.hourly.join(","));
   u.searchParams.set("daily", cfg.daily.join(","));
 
@@ -73,7 +81,8 @@ export function buildOpenMeteoUrl(type, { lat, lon }) {
 
 /**
  * Canonical bundle wrapper shape.
- * Bundle returns raw upstream + these metadata fields.
+ * Tides will later be DERIVED client-side from
+ * marine.hourly.sea_level_height_msl
  */
 export function makeBundleEnvelope({ slug, place, weather, marine }) {
   return {
