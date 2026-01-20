@@ -1,4 +1,5 @@
 // docs/location.js
+// Updated: 2026-01-20
 import { SKIPPY_PRESETS } from "./presets.js";
 
 "use strict";
@@ -18,29 +19,27 @@ function getQueryParam(name) {
 function getCurrentLocation() {
   try {
     const raw = localStorage.getItem("skippy.location");
-    if (!raw) return { slug: "", name: "", group: "" };
+    if (!raw) return { slug: "", name: "" };
     const loc = JSON.parse(raw);
+    // Backwards compatible: older versions stored {slug,name,group}.
     return {
       slug: loc.slug || "",
-      name: loc.name || "",
-      group: loc.group || ""
+      name: loc.name || ""
     };
   } catch (e) {
-    return { slug: "", name: "", group: "" };
+    return { slug: "", name: "" };
   }
 }
 
-function setCurrentLocation(place, groupName) {
+function setCurrentLocation(place) {
   localStorage.setItem(
     "skippy.location",
     JSON.stringify({
       slug: place.slug,
-      name: place.name,
-      group: groupName
+      name: place.name
     })
   );
 }
-
 
 function el(tag, className, text) {
   var n = document.createElement(tag);
@@ -86,71 +85,75 @@ function renderCurrent() {
   card.innerHTML =
     '<div class="muted small">Current selection</div>' +
     '<div class="spacer"></div>' +
-    '<div style="font-weight:800;">' + cur.name + "</div>" +
-    '<div class="muted small">' + cur.group + "</div>";
+    '<div style="font-weight:800;">' +
+    cur.name +
+    "</div>";
 }
 
-function renderGroups() {
-  var root = byId("groups");
+function renderPlaces() {
+  var root = byId("places");
   var status = byId("status");
   if (!root) return;
 
   root.innerHTML = "";
 
   if (!SKIPPY_PRESETS || !SKIPPY_PRESETS.length) {
-    if (status) status.textContent = "No presets found.";
+    if (status) status.textContent = "No locations found.";
     return;
   }
 
-  SKIPPY_PRESETS.forEach(function (g) {
-    var groupCard = el("div", "card", "");
-    var header = el("div", "muted small", g.group);
-    groupCard.appendChild(header);
+  // Single flat list (no groups).
+  var listCard = el("div", "card", "");
+  listCard.appendChild(el("div", "muted small", "Locations"));
 
-    var list = el("div", "", "");
-    list.style.marginTop = "10px";
+  var list = el("div", "", "");
+  list.style.marginTop = "10px";
 
-    g.places.forEach(function (p, idx) {
-      var row = el("div", "row", "");
+  SKIPPY_PRESETS.forEach(function (p, idx) {
+    var row = el("div", "row", "");
 
-      var left = el("div", "", "");
-      left.style.fontWeight = "800";
-      left.textContent = p.name;
+    var left = el("div", "", "");
+    left.style.fontWeight = "800";
+    left.textContent = p.name;
 
-      var right = el("button", "btn", "Select");
-      right.type = "button";
-      right.addEventListener("click", function () {
-        setCurrentLocation(p, g.group);
+    var right = el("button", "btn", "Select");
+    right.type = "button";
+    right.addEventListener("click", function () {
+      setCurrentLocation(p);
 
-        // One-shot toast shown on Home after redirect.
-        localStorage.setItem("skippy_toast", "Location set to: " + p.name);
+      // One-shot toast shown on Home after redirect.
+      localStorage.setItem("skippy_toast", "Location set to: " + p.name);
 
-        if (status) status.textContent = "Selected: " + p.name;
-        renderCurrent();
+      if (status) status.textContent = "Selected: " + p.name;
+      renderCurrent();
 
-        // Go home after selecting.
-        window.location.href = "./index.html";
-      });
-
-      row.appendChild(left);
-      row.appendChild(right);
-      list.appendChild(row);
-
-      // Only add spacer between rows, not after the last one.
-      if (idx !== g.places.length - 1) {
-        list.appendChild(el("div", "spacer", ""));
-      }
+      // Go home after selecting.
+      window.location.href = "./index.html";
     });
 
-    groupCard.appendChild(list);
-    root.appendChild(groupCard);
+    row.appendChild(left);
+    row.appendChild(right);
+    list.appendChild(row);
+
+    // Only add spacer between rows, not after the last one.
+    if (idx !== SKIPPY_PRESETS.length - 1) {
+      list.appendChild(el("div", "spacer", ""));
+    }
   });
+
+  listCard.appendChild(list);
+  root.appendChild(listCard);
+
+  if (status) {
+    status.textContent =
+      "Tip: choose the closest anchor point — the forecast model is regional, not micro-local.";
+  }
 }
 
 function main() {
   wireTopbar();
   renderCurrent();
-  renderGroups();
+  renderPlaces();
 }
 
 main();
