@@ -84,7 +84,7 @@ function minsUntilHHMM(hhmm) {
 }
 
 function formatMins(mins) {
-  if (mins == null || !isFinite(mins)) return "—";
+  if (mins == null || !isFinite(mins)) return "-";
   if (mins < 60) return mins + " min";
   var h = Math.floor(mins / 60);
   var m = mins % 60;
@@ -99,7 +99,7 @@ function findNextTideEvent(events) {
     if (mins == null) return;
     if (best == null || mins < best.mins) {
       best = {
-        type: e.type || "—",
+        type: e.type || "-",
         time: e.time,
         height_m: e.height_m,
         mins: mins,
@@ -115,7 +115,7 @@ function renderTodayTidesCard(dayData) {
 
   // Title line (optionally show station name)
   var stationName = meta && meta.station && meta.station.name ? meta.station.name : "";
-  var title = "Today’s tides" + (stationName ? " (" + stationName + ")" : "");
+  var title = "Today's tides" + (stationName ? " (" + stationName + ")" : "");
 
   var next = findNextTideEvent(tides);
 
@@ -129,7 +129,7 @@ function renderTodayTidesCard(dayData) {
     footer =
       (meta && meta.message)
         ? meta.message
-        : "High accuracy tidal data not available — using 15 minute modelled tide predictions";
+        : "High accuracy tidal data not available - using 15 minute modelled tide predictions";
   }
 
   // Render events (up to 4 typical)
@@ -143,9 +143,9 @@ function renderTodayTidesCard(dayData) {
           : "";
         return (
           '<div class="muted small">' +
-          (e.type || "—") +
+          (e.type || "-") +
           " Tide: <b>" +
-          (e.time || "—") +
+          (e.time || "-") +
           "</b>" +
           hm +
           "</div>"
@@ -162,7 +162,7 @@ function renderTodayTidesCard(dayData) {
       '<div class="row">' +
       '  <div>' +
       '    <div style="font-weight:800; font-size:18px;">Next: ' +
-      (next.type || "—") +
+      (next.type || "-") +
       ' tide</div>' +
       '    <div class="muted small">In ' +
       formatMins(next.mins) +
@@ -174,7 +174,7 @@ function renderTodayTidesCard(dayData) {
       '<div class="spacer"></div>';
   } else {
     nextLine =
-      '<div class="muted small">Next tide: —</div>' +
+      '<div class="muted small">Next tide: -</div>' +
       '<div class="spacer"></div>';
   }
 
@@ -290,17 +290,17 @@ function renderWeek(data, loc) {
     card.href = href;
 
     var windKts = d.wind && d.wind.kts != null ? d.wind.kts : 0;
-    var windDir = d.wind && d.wind.dir ? d.wind.dir : "—";
+    var windDir = d.wind && d.wind.dir ? d.wind.dir : "-";
     var waveM = d.waves && d.waves.m != null ? d.waves.m : 0;
 
-    var tempC = d.temp_c != null ? d.temp_c : "—";
-    var condition = d.condition || "—";
+    var tempC = d.temp_c != null ? d.temp_c : "-";
+    var condition = d.condition || "-";
     var dow = d.dow || "";
     var rating = d.rating || "";
     var score = d.score != null ? d.score : 0;
 
-    var bestStart = d.best_time && d.best_time.start ? d.best_time.start : "—";
-    var bestEnd = d.best_time && d.best_time.end ? d.best_time.end : "—";
+    var bestStart = d.best_time && d.best_time.start ? d.best_time.start : "-";
+    var bestEnd = d.best_time && d.best_time.end ? d.best_time.end : "-";
 
     card.innerHTML =
       "" +
@@ -385,9 +385,9 @@ async function main() {
     setHtml(
       "tideCard",
       "" +
-        '<div class="muted small">Today’s tides</div>' +
+        '<div class="muted small">Today's tides</div>' +
         '<div class="spacer"></div>' +
-        '<div class="muted small">Choose a location to see today’s tides.</div>' +
+        '<div class="muted small">Choose a location to see today's tides.</div>' +
         '<div class="spacer"></div>' +
         '<a class="btn" href="./location.html">Choose location</a>'
     );
@@ -419,7 +419,7 @@ async function main() {
     setHtml(
       "tideCard",
       "" +
-        '<div class="muted small">Today’s tides</div>' +
+        '<div class="muted small">Today's tides</div>' +
         '<div class="spacer"></div>' +
         '<div class="muted small">Unable to load tides right now.</div>'
     );
