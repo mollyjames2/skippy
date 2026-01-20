@@ -6,8 +6,8 @@
 export const SKIPPY_TIMEZONE = "Europe/London";
 export const SKIPPY_FORECAST_DAYS = 7;
 
-// Bump this when the bundle contract or request spec changes in a way that
-// should invalidate cached bundles in the browser.
+// Bump this when the request spec / bundle shape changes and you want
+// browser caches to refresh immediately.
 export const SKIPPY_BUNDLE_VERSION = 2;
 
 export const OPEN_METEO = {
@@ -33,7 +33,7 @@ export const OPEN_METEO = {
       "wind_speed_10m_max",
       "wind_gusts_10m_max",
 
-      // IMPORTANT: Home/Week wind direction must come from DAILY directly.
+      // Daily wind direction for Home/Week/Day tiles (daily-driven)
       "wind_direction_10m_dominant",
 
       "precipitation_sum",

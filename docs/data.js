@@ -1,11 +1,7 @@
 // docs/data.js
 
 import { SKIPPY_PLACES } from "./shared/places.js";
-import {
-  buildOpenMeteoUrl,
-  makeBundleEnvelope,
-  SKIPPY_BUNDLE_VERSION,
-} from "./shared/openmeteoSpec.js";
+import { buildOpenMeteoUrl, makeBundleEnvelope, SKIPPY_BUNDLE_VERSION } from "./shared/openmeteoSpec.js";
 
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
@@ -14,7 +10,6 @@ const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 -------------------------------------------------- */
 
 function bundleCacheKey(slug) {
-  // Include bundle version so old cached bundles don’t keep missing new fields.
   return "skippy.cache.bundle.v" + String(SKIPPY_BUNDLE_VERSION) + "." + slug;
 }
 
@@ -26,7 +21,7 @@ function readCache(key) {
     const ts = parsed.ts;
     const data = parsed.data;
 
-    // Invalidate if cached bundle was created with an older contract/spec.
+    // Drop cache if bundle version doesn't match current contract/spec.
     if (!data || data.v !== SKIPPY_BUNDLE_VERSION) return null;
 
     if (Date.now() - ts > CACHE_TTL_MS) return null;
@@ -100,12 +95,6 @@ async function fetchBundleFromWorker(slug) {
   return fetchJson(url);
 }
 
-/*
- * Single source of truth for all screens.
- * - One cached bundle per location
- * - Refresh once per hour
- * - Browser fetches upstream first; Worker is fallback only
- */
 export async function getBundle(slug) {
   const place = resolvePlace(slug);
   const key = bundleCacheKey(place.slug);
@@ -221,7 +210,7 @@ function summarizeVisibilityKmForDay(dayIso, wHourly) {
 }
 
 /* --------------------------------------------------
-   Week builder (from bundle daily layers only)
+   Week builder (DAILY only)
 -------------------------------------------------- */
 
 function buildWeekPayloadFromBundle(bundle, place) {
@@ -235,12 +224,13 @@ function buildWeekPayloadFromBundle(bundle, place) {
   const waveMax = mDaily.wave_height_max || [];
   const windMaxKmh = wDaily.wind_speed_10m_max || [];
 
-  // DAILY: dominant wind direction (10m)
+  // DAILY: Dominant wind direction (10m)
   const windDirDom = wDaily.wind_direction_10m_dominant || [];
 
   const days = times.map(function (date, i) {
     const wave = (waveMax[i] ?? 0);
     const windKmh = (windMaxKmh[i] ?? 0);
+
     const score = scoreHourPlaceholder({ wave_m: wave, wind_kmh: windKmh });
 
     return {
@@ -249,7 +239,7 @@ function buildWeekPayloadFromBundle(bundle, place) {
       label: formatLabel(date),
 
       condition: weatherCodeToText(codes[i]),
-      temp_c: Math.round(tmax[i] ?? 0),
+      temp_c: Math.round((tmax[i] ?? 0)),
 
       score: score,
       rating: scoreToRating(score),
@@ -277,18 +267,13 @@ function buildWeekPayloadFromBundle(bundle, place) {
     place: place,
     days: days,
     best_day: best
-      ? {
-          dow: best.dow,
-          label: best.label,
-          score: best.score,
-          best_time: best.best_time,
-        }
+      ? { dow: best.dow, label: best.label, score: best.score, best_time: best.best_time }
       : null,
   };
 }
 
 /* --------------------------------------------------
-   Day builder (daily summary + hourly rows)
+   Day builder (DAILY summary + HOURLY rows)
 -------------------------------------------------- */
 
 function buildDayPayloadFromBundle(bundle, place, dayIso) {
@@ -306,7 +291,7 @@ function buildDayPayloadFromBundle(bundle, place, dayIso) {
   const windMaxKmh = (wDaily.wind_speed_10m_max || [])[dayIdx];
   const gustMaxKmh = (wDaily.wind_gusts_10m_max || [])[dayIdx];
 
-  // DAILY: dominant wind direction (10m)
+  // DAILY: Dominant wind direction (10m)
   const windDirDom = (wDaily.wind_direction_10m_dominant || [])[dayIdx];
 
   const precipSum = (wDaily.precipitation_sum || [])[dayIdx];
@@ -323,12 +308,13 @@ function buildDayPayloadFromBundle(bundle, place, dayIso) {
   const wHourly = (bundle && bundle.weather && bundle.weather.hourly) ? bundle.weather.hourly : {};
   const mHourly = (bundle && bundle.marine && bundle.marine.hourly) ? bundle.marine.hourly : {};
 
-  // HOURLY: visibility is hourly-driven
+  // HOURLY summary for the tile (worst-of-day)
   const visKm = summarizeVisibilityKmForDay(dayIso, wHourly);
 
   // Align marine to weather timestamps
   const wTimes = wHourly.time || [];
   const mTimes = mHourly.time || [];
+
   const marineIndexByTime = {};
   for (let i = 0; i < mTimes.length; i++) marineIndexByTime[mTimes[i]] = i;
 
@@ -339,6 +325,7 @@ function buildDayPayloadFromBundle(bundle, place, dayIso) {
 
     const j = marineIndexByTime[t];
 
+    // HOURLY weather
     const tempC = (wHourly.temperature_2m || [])[i];
     const codeH = (wHourly.weather_code || [])[i];
 
@@ -349,6 +336,7 @@ function buildDayPayloadFromBundle(bundle, place, dayIso) {
     const precipMmH = (wHourly.precipitation || [])[i];
     const visMH = (wHourly.visibility || [])[i];
 
+    // HOURLY marine
     const waveMH = (j != null && mHourly.wave_height) ? mHourly.wave_height[j] : null;
     const wavePeriodH = (j != null && mHourly.wave_period) ? mHourly.wave_period[j] : null;
 
@@ -400,7 +388,7 @@ function buildDayPayloadFromBundle(bundle, place, dayIso) {
       wave_m: round1(waveMax || 0),
       period_s: round1(wavePeriodMax || 0),
 
-      // HOURLY-derived daily summary
+      // HOURLY-derived summary (OK for Day screen)
       visibility_km: visKm == null ? "-" : round1(visKm),
 
       precip_mm: round1(precipSum || 0),
