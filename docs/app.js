@@ -420,7 +420,7 @@ async function main() {
     setHtml(
       "tideCard",
       "" +
-        '<div class="muted small">Today's tides</div>' +
+        '<div class="muted small">Todays tides</div>' +
         '<div class="spacer"></div>' +
         '<div class="muted small">Unable to load tides right now.</div>'
     );
