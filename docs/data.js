@@ -138,9 +138,11 @@ function weatherCodeToText(code) {
 }
 
 function scoreToRating(score) {
-  if (score >= 80) return "Great";
-  if (score >= 50) return "OK";
-  return "Poor";
+  if (score >= 90) return "Excellent";
+  if (score >= 60) return "Good";
+  if (score >= 40) return "OK";
+  if (score >= 20) return "Poor";
+  return "Avoid";
 }
 
 function formatDow(dateIso) {
