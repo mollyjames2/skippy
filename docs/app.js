@@ -384,12 +384,13 @@ async function main() {
 
     setHtml(
       "tideCard",
-      "" +
-        '<div class="muted small">Today's tides</div>' +
-        '<div class="spacer"></div>' +
-        '<div class="muted small">Choose a location to see today's tides.</div>' +
-        '<div class="spacer"></div>' +
-        '<a class="btn" href="./location.html">Choose location</a>'
+      `
+        <div class="muted small">Today's tides</div>
+        <div class="spacer"></div>
+        <div class="muted small">Choose a location to see today's tides.</div>
+        <div class="spacer"></div>
+        <a class="btn" href="./location.html">Choose location</a>
+      `
     );
 
     setHtml(
