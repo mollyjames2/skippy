@@ -1,11 +1,14 @@
 // docs/data.js
 
 import { SKIPPY_PLACES } from "./shared/places.js";
+
 import {
   buildOpenMeteoUrl,
   makeBundleEnvelope,
   SKIPPY_BUNDLE_VERSION,
 } from "./shared/openmeteoSpec.js";
+
+import { calculateBoatingScore, scoreToRating } from "./common/score.js";
 
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
@@ -144,14 +147,6 @@ function degToCompass(deg) {
   return dirs[idx];
 }
 
-function scoreToRating(score) {
-  if (score >= 90) return "Excellent";
-  if (score >= 60) return "Good";
-  if (score >= 40) return "OK";
-  if (score >= 20) return "Poor";
-  return "Avoid";
-}
-
 function formatDow(dateIso) {
   const d = new Date(dateIso + "T00:00:00");
   return new Intl.DateTimeFormat(undefined, { weekday: "short" }).format(d);
@@ -160,10 +155,6 @@ function formatDow(dateIso) {
 function formatLabel(dateIso) {
   const d = new Date(dateIso + "T00:00:00");
   return new Intl.DateTimeFormat(undefined, { day: "2-digit", month: "short" }).format(d);
-}
-
-function clamp(n, a, b) {
-  return Math.max(a, Math.min(b, n));
 }
 
 function round1(x) {
@@ -182,17 +173,6 @@ function kmhToKnotsInt(kmh) {
   const k = kmhToKnotsFloat(kmh);
   if (k == null) return 0;
   return Math.round(k);
-}
-
-function scoreHourPlaceholder(opts) {
-  const wave = Number(opts.wave_m);
-  const wind = Number(opts.wind_kmh);
-
-  let s = 100;
-  if (isFinite(wave)) s -= wave * 20;
-  if (isFinite(wind)) s -= wind;
-
-  return Math.round(clamp(s, 0, 100));
 }
 
 function summarizeVisibilityKmForDay(dayIso, wHourly) {
@@ -225,14 +205,12 @@ function detectExtremaPlateauAware(times, levels) {
   const events = [];
   if (!times || !levels || times.length < 3 || times.length !== levels.length) return events;
 
-  // Helper to get slope sign between consecutive points (ignoring NaN)
   function sign(x) {
     if (x > 0) return 1;
     if (x < 0) return -1;
     return 0;
   }
 
-  // Compute slope signs between points
   const slope = [];
   for (let i = 0; i < levels.length - 1; i++) {
     const a = Number(levels[i]);
@@ -244,30 +222,20 @@ function detectExtremaPlateauAware(times, levels) {
     }
   }
 
-  // Walk slope array; look for + to - (max) and - to + (min), skipping plateaus (0)
   let lastNonZero = null;
-  let lastNonZeroIdx = null;
 
   for (let i = 0; i < slope.length; i++) {
     const s = slope[i];
     if (s === null) continue;
 
-    if (s === 0) {
-      // plateau: keep walking until slope resumes
-      continue;
-    }
+    if (s === 0) continue;
 
     if (lastNonZero === null) {
       lastNonZero = s;
-      lastNonZeroIdx = i;
       continue;
     }
 
-    // Turning points:
-    // + to - => local maximum near i
-    // - to + => local minimum near i
     if (lastNonZero === 1 && s === -1) {
-      // choose the "peak" index: i (or i+1) — use i+0.5 plateau midpoint logic is not needed at hourly resolution
       const peakIdx = i;
       const h = Number(levels[peakIdx]);
       if (isFinite(h)) {
@@ -282,10 +250,8 @@ function detectExtremaPlateauAware(times, levels) {
     }
 
     lastNonZero = s;
-    lastNonZeroIdx = i;
   }
 
-  // De-dup very close consecutive events of same type (hourly sampling can create jitter)
   const cleaned = [];
   for (let i = 0; i < events.length; i++) {
     const prev = cleaned[cleaned.length - 1];
@@ -295,7 +261,6 @@ function detectExtremaPlateauAware(times, levels) {
       continue;
     }
     if (prev.type === cur.type) {
-      // keep the more "extreme" one
       if (cur.type === "High") {
         if (cur.height_m >= prev.height_m) cleaned[cleaned.length - 1] = cur;
       } else {
@@ -317,7 +282,6 @@ function tidesForDay(bundle, dayIso) {
 
   const events = detectExtremaPlateauAware(times, levels);
 
-  // Filter to just this calendar day (times are already Europe/London due to timezone param)
   const dayEvents = events
     .filter(e => String(e.iso || "").slice(0, 10) === dayIso)
     .sort((a, b) => String(a.iso).localeCompare(String(b.iso)))
@@ -352,7 +316,7 @@ function buildWeekPayloadFromBundle(bundle, place) {
     const wave = (waveMax[i] ?? 0);
     const windKmh = (windMaxKmh[i] ?? 0);
 
-    const score = scoreHourPlaceholder({ wave_m: wave, wind_kmh: windKmh });
+    const score = calculateBoatingScore({ wave_m: wave, wind_kmh: windKmh });
 
     return {
       date: date,
@@ -423,7 +387,7 @@ function buildDayPayloadFromBundle(bundle, place, dayIso) {
   const waveMax = (mDaily.wave_height_max || [])[dayIdx];
   const wavePeriodMax = (mDaily.wave_period_max || [])[dayIdx];
 
-  const dayScore = scoreHourPlaceholder({ wave_m: waveMax || 0, wind_kmh: windMaxKmh || 0 });
+  const dayScore = calculateBoatingScore({ wave_m: waveMax || 0, wind_kmh: windMaxKmh || 0 });
   const title = formatDow(dayIso) + " " + formatLabel(dayIso);
 
   const wHourly = (bundle && bundle.weather && bundle.weather.hourly) ? bundle.weather.hourly : {};
@@ -461,7 +425,7 @@ function buildDayPayloadFromBundle(bundle, place, dayIso) {
     const waveMH = (j != null && mHourly.wave_height) ? mHourly.wave_height[j] : null;
     const wavePeriodH = (j != null && mHourly.wave_period) ? mHourly.wave_period[j] : null;
 
-    const score = scoreHourPlaceholder({ wave_m: waveMH || 0, wind_kmh: windKmhH || 0 });
+    const score = calculateBoatingScore({ wave_m: waveMH || 0, wind_kmh: windKmhH || 0 });
 
     hours.push({
       time: t.slice(11, 16),
@@ -482,7 +446,7 @@ function buildDayPayloadFromBundle(bundle, place, dayIso) {
     });
   }
 
-  // NEW: derived tides from marine sea level curve
+  // derived tides from marine sea level curve
   const tides = tidesForDay(bundle, dayIso);
 
   return {
