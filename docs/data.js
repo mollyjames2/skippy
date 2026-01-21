@@ -546,6 +546,18 @@ async function buildDayPayloadFromBundle(bundle, place, dayIso) {
       };
     }
   }
+    // Only show tidal height when sourced from TideTimes.
+  // For modelled tides, hide height values intentionally.
+  if (!tidesMeta || tidesMeta.source !== "tidetimes") {
+    tides = (tides || []).map(function (e) {
+      return {
+        type: e && e.type ? e.type : "-",
+        time: e && e.time ? e.time : "-",
+        height_m: null,
+      };
+    });
+  }
+
 
   return {
     location: (place && place.name) ? place.name : "",
