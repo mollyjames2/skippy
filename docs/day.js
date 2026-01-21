@@ -233,6 +233,11 @@ function renderDay(data, loc) {
   if (tides) {
     tides.innerHTML = "";
     (data.tides || []).forEach(function (t) {
+      var height =
+        t.height_m != null && isFinite(Number(t.height_m))
+          ? (String(Number(t.height_m).toFixed(1)).replace(/\.0$/, "") + " m")
+          : "";
+
       var row = document.createElement("div");
       row.className = "row";
       row.innerHTML =
@@ -242,8 +247,8 @@ function renderDay(data, loc) {
         t.time +
         "</span></div>" +
         '<div class="muted small">' +
-        t.height_m +
-        " m</div>";
+        height +
+        "</div>";
       tides.appendChild(row);
     });
   }
