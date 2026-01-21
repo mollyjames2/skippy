@@ -123,7 +123,7 @@ function renderTodayTidesCard(dayData) {
   var footer = "";
   if (meta && meta.source === "tidetimes") {
     var t = formatUpdatedAtLondon(meta.updated_at);
-    footer = "Data accessed from Tide Times" + (t ? " · last updated " + t : "");
+    footer = "Data accessed from Tide Times" + (t ? " - last updated " + t : "");
   } else {
     // Model fallback / none
     footer =
@@ -166,7 +166,7 @@ function renderTodayTidesCard(dayData) {
       ' tide</div>' +
       '    <div class="muted small">In ' +
       formatMins(next.mins) +
-      " · at <b>" +
+      "  at <b>" +
       next.time +
       "</b></div>" +
       "  </div>" +
