@@ -261,11 +261,32 @@ h2 {
 }
 
 /* Score-toned cards (Today + Best Day) - full tint + outline */
-.card.tone-excellent { border: 2px solid rgba(0, 200, 120, 0.70); background: rgba(0, 200, 120, 0.25); backdrop-filter: saturate(1.1);}
-.card.tone-good      { border: 2px solid rgba(70, 170, 255, 0.70); background: rgba(70, 170, 255, 0.25); backdrop-filter: saturate(1.1); }
-.card.tone-ok        { border: 2px solid rgba(255, 200, 60, 0.70); background: rgba(255, 200, 60, 0.25); backdrop-filter: saturate(1.1);}
-.card.tone-poor      { border: 2px solid rgba(255, 140, 60, 0.70); background: rgba(255, 140, 60, 0.25); backdrop-filter: saturate(1.1); }
-.card.tone-avoid     { border: 2px solid rgba(255, 80, 80, 0.70);  background: rgba(255, 80, 80, 0.25); backdrop-filter: saturate(1.1); }
+
+.card.tone-excellent {
+  background: rgba(0, 200, 120, 0.20);
+  border: 1px solid rgba(0, 200, 120, 0.35);
+}
+
+.card.tone-good {
+  background: rgba(80, 140, 255, 0.20);
+  border: 1px solid rgba(80, 140, 255, 0.35);
+}
+
+.card.tone-ok {
+  background: rgba(255, 170, 0, 0.18);
+  border: 1px solid rgba(255, 170, 0, 0.35);
+}
+
+.card.tone-poor {
+  background: rgba(255, 80, 80, 0.18);
+  border: 1px solid rgba(255, 80, 80, 0.35);
+}
+
+.card.tone-avoid {
+  background: rgba(140, 140, 140, 0.20);
+  border: 1px solid rgba(140, 140, 140, 0.35);
+}
+
 
 /* Bigger score number for Today + Best Day cards (not a pill) */
 .hero-score {
