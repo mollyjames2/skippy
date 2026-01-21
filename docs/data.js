@@ -95,6 +95,18 @@ function todayIsoLondon() {
 }
 
 /**
+ * Adds N days to a YYYY-MM-DD string and returns YYYY-MM-DD.
+ * Uses UTC math to avoid local timezone DST weirdness.
+ */
+function addDaysIso(dateIso, days) {
+  const s = String(dateIso || "");
+  const d = new Date(s + "T00:00:00Z");
+  if (isNaN(d.getTime())) throw new Error("Invalid date: " + s);
+  d.setUTCDate(d.getUTCDate() + Number(days || 0));
+  return d.toISOString().slice(0, 10);
+}
+
+/**
  * Fetch today's TideTimes-derived tides from the Worker.
  * Returns:
  *  - { ok:true, events:[...], updated_at, station, ... } on success
@@ -483,6 +495,19 @@ async function buildDayPayloadFromBundle(bundle, place, dayIso) {
   // Modelled tides (15-min sea level curve extrema)
   const modelledTides = tidesForDay(bundle, dayIso);
 
+  // Tomorrow modelled tides (ONLY needed for the homepage "Today's tides" card fallback logic)
+  // If there are no remaining extrema today, the UI will take the first extrema tomorrow.
+  const todayIso = todayIsoLondon();
+  let tidesTomorrowModel = [];
+  if (dayIso === todayIso) {
+    try {
+      const tomorrowIso = addDaysIso(dayIso, 1);
+      tidesTomorrowModel = tidesForDay(bundle, tomorrowIso);
+    } catch (e) {
+      tidesTomorrowModel = [];
+    }
+  }
+
   // If this is "today" (London), try to override with TideTimes RSS via worker.
   let tides = modelledTides;
   let tidesMeta = {
@@ -494,7 +519,6 @@ async function buildDayPayloadFromBundle(bundle, place, dayIso) {
     station: null,
   };
 
-  const todayIso = todayIsoLondon();
   if (dayIso === todayIso) {
     const rss = await fetchTodayTidesFromWorker(place.slug);
 
@@ -561,6 +585,10 @@ async function buildDayPayloadFromBundle(bundle, place, dayIso) {
 
     tides: tides,
     tides_meta: tidesMeta,
+
+    // Used by the homepage "Today's tides" card to show the *next* extrema when the next one is tomorrow.
+    // This is always modelled (15-min curve). Only populated for dayIso === todayIsoLondon().
+    tides_tomorrow_model: tidesTomorrowModel,
 
     recommended: [{ start: "All day", end: "All day", score: dayScore }],
     hours: hours,

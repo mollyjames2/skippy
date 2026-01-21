@@ -63,7 +63,14 @@ function formatUpdatedAtLondon(iso) {
    Tide card helpers
 --------------------------------------------- */
 
-function minsUntilHHMM(hhmm) {
+/**
+ * Returns minutes until hh:mm.
+ *
+ * dayOffset:
+ *   0 = today only (if time already passed, returns null)
+ *   1 = tomorrow (always treats hh:mm as tomorrow)
+ */
+function minsUntilHHMM(hhmm, dayOffset) {
   if (!hhmm || typeof hhmm !== "string") return null;
 
   var parts = hhmm.split(":");
@@ -75,10 +82,18 @@ function minsUntilHHMM(hhmm) {
 
   var now = new Date();
   var t = new Date(now);
+
+  // Anchor date first
+  if (dayOffset === 1) {
+    t.setDate(t.getDate() + 1);
+  }
+
   t.setHours(h, m, 0, 0);
 
-  // If time already passed today, treat it as next day
-  if (t.getTime() < now.getTime()) t.setDate(t.getDate() + 1);
+  if (dayOffset === 0) {
+    // Today-only: if it already passed, it's not a valid "next" event
+    if (t.getTime() < now.getTime()) return null;
+  }
 
   return Math.round((t.getTime() - now.getTime()) / 60000);
 }
@@ -91,11 +106,11 @@ function formatMins(mins) {
   return h + "h " + String(m).padStart(2, "0") + "m";
 }
 
-function findNextTideEvent(events) {
+function findNextTideEvent(events, dayOffset) {
   var best = null;
   (events || []).forEach(function (e) {
     if (!e || !e.time) return;
-    var mins = minsUntilHHMM(e.time);
+    var mins = minsUntilHHMM(e.time, dayOffset || 0);
     if (mins == null) return;
     if (best == null || mins < best.mins) {
       best = {
@@ -103,6 +118,7 @@ function findNextTideEvent(events) {
         time: e.time,
         height_m: e.height_m,
         mins: mins,
+        is_tomorrow: dayOffset === 1,
       };
     }
   });
@@ -117,7 +133,16 @@ function renderTodayTidesCard(dayData) {
   var stationName = meta && meta.station && meta.station.name ? meta.station.name : "";
   var title = "Today's tides" + (stationName ? " (" + stationName + ")" : "");
 
-  var next = findNextTideEvent(tides);
+  // Next tide:
+  // 1) Prefer the next tide event *today* from today's event list (do not roll past times into tomorrow)
+  // 2) If there are none left today, fall back to tomorrow's *modelled* extrema (15-min curve)
+  var next = findNextTideEvent(tides, 0);
+  if (!next) {
+    var tomorrowModel = (dayData && dayData.tides_tomorrow_model) ? dayData.tides_tomorrow_model : [];
+    if (tomorrowModel && tomorrowModel.length) {
+      next = findNextTideEvent(tomorrowModel, 1);
+    }
+  }
 
   // Footer / caveat message
   var footer = "";
@@ -132,7 +157,7 @@ function renderTodayTidesCard(dayData) {
         : "High accuracy tidal data not available - using 15 minute modelled tide predictions";
   }
 
-  // Render events (up to 4 typical)
+  // Render events (up to 6)
   var lines = "";
   if (tides && tides.length) {
     lines = tides
@@ -166,7 +191,7 @@ function renderTodayTidesCard(dayData) {
       ' tide</div>' +
       '    <div class="muted small">In ' +
       formatMins(next.mins) +
-      "  at <b>" +
+      " - at <b>" +
       next.time +
       "</b></div>" +
       "  </div>" +
@@ -382,7 +407,6 @@ async function main() {
   if (!loc) {
     setText("location", "No location selected");
 
-   
     setHtml(
       "tideCard",
       "" +
