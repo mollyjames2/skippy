@@ -154,6 +154,7 @@ function renderTodayTidesCard(dayData) {
   // Title line (optionally show station name)
   var stationName = meta && meta.station && meta.station.name ? meta.station.name : "";
   var title = "Today's tides" + (stationName ? " (" + stationName + ")" : "");
+  var todayScore = dayData && dayData.summary ? dayData.summary.score : null;
 
   // Next tide:
   // 1) Prefer the next tide event *today* from today's event list (do not roll past times into tomorrow)
@@ -202,7 +203,6 @@ function renderTodayTidesCard(dayData) {
   } else {
     lines = '<div class="muted small">No tide data available.</div>';
   }
-
   var nextLine = "";
   if (next) {
     nextLine =
@@ -217,14 +217,18 @@ function renderTodayTidesCard(dayData) {
       next.time +
       "</b></div>" +
       "  </div>" +
+      '  <div class="hero-score">' + (todayScore == null ? "-" : todayScore) + "</div>" +
       "</div>" +
       '<div class="spacer"></div>';
   } else {
     nextLine =
-      '<div class="muted small">Next tide: -</div>' +
+      '<div class="row">' +
+      '  <div class="muted small">Next tide: -</div>' +
+      '  <div class="hero-score">' + (todayScore == null ? "-" : todayScore) + "</div>" +
+      "</div>" +
       '<div class="spacer"></div>';
   }
-
+  
   setHtml(
     "tideCard",
     "" +
@@ -314,12 +318,7 @@ function renderWeek(data, loc) {
         " - " +
         best.best_time.end +
         "</div>" +
-        "  </div>" +
-        '  <div class="' +
-        pillClass(best.score) +
-        '" style="font-size:16px;">' +
-        best.score +
-        "</div>" +
+        '  <div class="hero-score">' + best.score + "</div>" +
         "</div>"
     );
     applyCardTone(document.getElementById("bestCard"), best.score);
