@@ -4,7 +4,7 @@
 // Browser and Worker MUST use this to avoid drift.
 
 export const SKIPPY_TIMEZONE = "Europe/London";
-export const SKIPPY_FORECAST_DAYS = 7;
+export const SKIPPY_FORECAST_DAYS = 8;
 
 // Bump this when the request spec / bundle shape changes
 // so cached bundles refresh automatically.

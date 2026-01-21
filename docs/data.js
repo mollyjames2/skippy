@@ -358,13 +358,25 @@ function buildWeekPayloadFromBundle(bundle, place) {
   // DAILY: Dominant wind direction (10m)
   const windDirDom = wDaily.wind_direction_10m_dominant || [];
 
-  const days = times.map(function (date, i) {
+  const todayIso = todayIsoLondon();
+  const todayIdx = times.indexOf(todayIso);
+
+  // Start from tomorrow if we can find today; otherwise fall back to skipping the first element.
+  const startIdx = (todayIdx >= 0) ? (todayIdx + 1) : 1;
+
+  // We want 7 days excluding today.
+  const endIdx = Math.min(startIdx + 7, times.length);
+
+  const days = [];
+  for (let i = startIdx; i < endIdx; i++) {
+    const date = times[i];
+
     const wave = (waveMax[i] ?? 0);
     const windKmh = (windMaxKmh[i] ?? 0);
 
     const score = calculateBoatingScore({ wave_m: wave, wind_kmh: windKmh });
 
-    return {
+    days.push({
       date: date,
       dow: formatDow(date),
       label: formatLabel(date),
@@ -385,8 +397,8 @@ function buildWeekPayloadFromBundle(bundle, place) {
       },
 
       best_time: { start: "All day", end: "All day" },
-    };
-  });
+    });
+  }
 
   const best = days.reduce(function (acc, d) {
     if (!acc || d.score > acc.score) return d;
@@ -546,7 +558,8 @@ async function buildDayPayloadFromBundle(bundle, place, dayIso) {
       };
     }
   }
-    // Only show tidal height when sourced from TideTimes.
+
+  // Only show tidal height when sourced from TideTimes.
   // For modelled tides, hide height values intentionally.
   if (!tidesMeta || tidesMeta.source !== "tidetimes") {
     tides = (tides || []).map(function (e) {
@@ -557,7 +570,6 @@ async function buildDayPayloadFromBundle(bundle, place, dayIso) {
       };
     });
   }
-
 
   return {
     location: (place && place.name) ? place.name : "",
