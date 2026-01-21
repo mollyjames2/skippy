@@ -125,6 +125,28 @@ function findNextTideEvent(events, dayOffset) {
   return best;
 }
 
+function toneClassForScore(score) {
+  var s = Number(score);
+  if (!isFinite(s)) return "";
+  if (s >= 90) return "tone-excellent";
+  if (s >= 60) return "tone-good";
+  if (s >= 40) return "tone-ok";
+  if (s >= 20) return "tone-poor";
+  return "tone-avoid";
+}
+
+function applyCardTone(el, score) {
+  if (!el) return;
+
+  // Remove previous tones
+  el.classList.remove("tone-excellent", "tone-good", "tone-ok", "tone-poor", "tone-avoid");
+
+  var c = toneClassForScore(score);
+  if (c) el.classList.add(c);
+}
+
+
+
 function renderTodayTidesCard(dayData) {
   var tides = (dayData && dayData.tides) ? dayData.tides : [];
   var meta = (dayData && dayData.tides_meta) ? dayData.tides_meta : null;
@@ -213,6 +235,9 @@ function renderTodayTidesCard(dayData) {
       '<div class="spacer"></div>' +
       '<div class="muted small">' + footer + "</div>"
   );
+  var todayScore = dayData && dayData.summary ? dayData.summary.score : null;
+  applyCardTone(document.getElementById("tideCard"), todayScore);
+
 }
 
 /* ---------------------------------------------
@@ -297,8 +322,12 @@ function renderWeek(data, loc) {
         "</div>" +
         "</div>"
     );
+    applyCardTone(document.getElementById("bestCard"), best.score);
+
   } else {
     setHtml("bestCard", '<div class="muted small">No data</div>');
+    applyCardTone(document.getElementById("bestCard"), null);
+
   }
 
   var daysEl = document.getElementById("days");

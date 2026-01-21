@@ -259,3 +259,11 @@ h2 {
 .hourly-extras {
   margin-top: 6px;
 }
+
+/* Score-toned cards (Today + Best Day) */
+.card.tone-excellent { border: 1px solid rgba(0, 200, 120, 0.55); box-shadow: 0 10px 24px rgba(0, 200, 120, 0.10); }
+.card.tone-good      { border: 1px solid rgba(70, 170, 255, 0.55); box-shadow: 0 10px 24px rgba(70, 170, 255, 0.10); }
+.card.tone-ok        { border: 1px solid rgba(255, 200, 60, 0.55); box-shadow: 0 10px 24px rgba(255, 200, 60, 0.10); }
+.card.tone-poor      { border: 1px solid rgba(255, 140, 60, 0.55); box-shadow: 0 10px 24px rgba(255, 140, 60, 0.10); }
+.card.tone-avoid     { border: 1px solid rgba(255, 80, 80, 0.55);  box-shadow: 0 10px 24px rgba(255, 80, 80, 0.10); }
+
