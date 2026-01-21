@@ -153,7 +153,7 @@ function renderTodayTidesCard(dayData) {
 
   // Title line (optionally show station name)
   var stationName = meta && meta.station && meta.station.name ? meta.station.name : "";
-  var title = "Today's tides" + (stationName ? " (" + stationName + ")" : "");
+  var title = "Today at a glance" + (stationName ? " (" + stationName + ")" : "");
   var todayScore = dayData && dayData.summary ? dayData.summary.score : null;
 
   // Next tide:
@@ -241,6 +241,21 @@ function renderTodayTidesCard(dayData) {
   );
   var todayScore = dayData && dayData.summary ? dayData.summary.score : null;
   applyCardTone(document.getElementById("tideCard"), todayScore);
+  // Make the whole "Today's tides" card open the Day view for today.
+  // (Ignore clicks on any links inside the card.)
+  var tideEl = document.getElementById("tideCard");
+  if (tideEl && !tideEl.dataset.daylinkWired) {
+    tideEl.dataset.daylinkWired = "1";
+    tideEl.style.cursor = "pointer";
+    tideEl.addEventListener("click", function (e) {
+      if (e && e.target) {
+        var a = e.target.closest ? e.target.closest("a") : null;
+        if (a) return;
+      }
+      var date = (dayData && dayData.date) ? dayData.date : todayIsoLondon();
+      window.location.href = "./day.html?date=" + encodeURIComponent(date);
+    });
+  }
 
 }
 
