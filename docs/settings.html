@@ -29,6 +29,35 @@
 
       <div class="spacer"></div>
 
+      <!-- Boating score card -->
+      <div class="card">
+        <div style="font-weight:800; margin-bottom:6px;">Boating Score</div>
+        <div class="muted small">
+          Choose which hours Skippy averages when calculating the daily Boating Score.
+        </div>
+
+        <div class="spacer"></div>
+
+        <div class="row" style="align-items:flex-start;">
+          <div class="muted small" style="flex:1;">
+            Daily score uses
+          </div>
+
+          <div class="segmented" id="dailyScoreMode" aria-label="Daily score hours">
+            <button class="segbtn" data-mode="all" type="button">All hours</button>
+            <button class="segbtn" data-mode="daylight" type="button">Daylight</button>
+          </div>
+        </div>
+
+        <div class="spacer"></div>
+
+        <div class="muted small">
+          Daylight uses local sunrise/sunset and rounds to full hours.
+        </div>
+      </div>
+
+      <div class="spacer"></div>
+
       <!-- About card -->
       <div class="card">
         <div style="font-weight:800; margin-bottom:6px;">About</div>

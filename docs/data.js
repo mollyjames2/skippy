@@ -11,6 +11,114 @@ import {
 import { calculateBoatingScore, scoreToRating } from "./common/score.js";
 
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+// Daily score preference: whether to average all hours or daylight hours.
+// "all" | "daylight"
+const DAILY_SCORE_HOURS_MODE_KEY = "skippy.score.dailyHoursMode";
+
+function getDailyScoreHoursMode() {
+  try {
+    const v = localStorage.getItem(DAILY_SCORE_HOURS_MODE_KEY);
+    return v === "daylight" ? "daylight" : "all";
+  } catch (e) {
+    return "all";
+  }
+}
+
+function parseHHMMToMin(hhmm) {
+  const s = String(hhmm || "");
+  if (!/^\d\d:\d\d$/.test(s)) return null;
+  const h = Number(s.slice(0, 2));
+  const m = Number(s.slice(3, 5));
+  if (!isFinite(h) || !isFinite(m)) return null;
+  return h * 60 + m;
+}
+
+function ceilToHour(mins) {
+  return Math.ceil(mins / 60) * 60;
+}
+
+function floorToHour(mins) {
+  return Math.floor(mins / 60) * 60;
+}
+
+function hourIsInDaylight(mode, hourHHMM, sunriseHHMM, sunsetHHMM) {
+  if (mode !== "daylight") return true;
+
+  const sr = parseHHMMToMin(sunriseHHMM);
+  const ss = parseHHMMToMin(sunsetHHMM);
+  if (sr == null || ss == null) return true;
+  if (ss <= sr) return true;
+
+  // Match the Day screen filter logic: round sunrise up to next hour and sunset down.
+  const startMin = ceilToHour(sr);
+  const endMin = floorToHour(ss);
+
+  const tMin = parseHHMMToMin(hourHHMM);
+  if (tMin == null) return true;
+
+  return tMin >= startMin && tMin <= endMin;
+}
+
+function averageScoreFromHourRows(mode, hourRows, sunriseHHMM, sunsetHHMM, fallbackScore) {
+  let sum = 0;
+  let n = 0;
+
+  const list = Array.isArray(hourRows) ? hourRows : [];
+  for (let i = 0; i < list.length; i++) {
+    const h = list[i] || {};
+    if (!hourIsInDaylight(mode, h.time, sunriseHHMM, sunsetHHMM)) continue;
+
+    const s = Number(h.score);
+    if (!isFinite(s)) continue;
+    sum += s;
+    n += 1;
+  }
+
+  if (n <= 0) return isFinite(Number(fallbackScore)) ? Math.round(Number(fallbackScore)) : 0;
+  return Math.round(sum / n);
+}
+
+function averageDailyScoreFromHourly(bundle, dayIso, sunriseHHMM, sunsetHHMM, mode, fallbackWaveM, fallbackWindKmh) {
+  const fallback = calculateBoatingScore({
+    wave_m: fallbackWaveM || 0,
+    wind_kmh: fallbackWindKmh || 0,
+  });
+
+  const wHourly = (bundle && bundle.weather && bundle.weather.hourly) ? bundle.weather.hourly : {};
+  const mHourly = (bundle && bundle.marine && bundle.marine.hourly) ? bundle.marine.hourly : {};
+
+  const wTimes = wHourly.time || [];
+  const mTimes = mHourly.time || [];
+
+  if (!Array.isArray(wTimes) || !wTimes.length) return fallback;
+
+  // Align marine to weather timestamps
+  const marineIndexByTime = {};
+  for (let i = 0; i < mTimes.length; i++) marineIndexByTime[mTimes[i]] = i;
+
+  let sum = 0;
+  let n = 0;
+
+  for (let i = 0; i < wTimes.length; i++) {
+    const t = String(wTimes[i] || "");
+    if (t.slice(0, 10) !== dayIso) continue;
+
+    const hhmm = t.slice(11, 16);
+    if (!hourIsInDaylight(mode, hhmm, sunriseHHMM, sunsetHHMM)) continue;
+
+    const j = marineIndexByTime[t];
+
+    const windKmhH = (wHourly.wind_speed_10m || [])[i];
+    const waveMH = (j != null && mHourly.wave_height) ? mHourly.wave_height[j] : null;
+
+    const s = calculateBoatingScore({ wave_m: waveMH || 0, wind_kmh: windKmhH || 0 });
+    sum += s;
+    n += 1;
+  }
+
+  if (n <= 0) return fallback;
+  return Math.round(sum / n);
+}
 
 /* --------------------------------------------------
    Cache helpers (single bundle cache per location)
@@ -357,6 +465,10 @@ function buildWeekPayloadFromBundle(bundle, place) {
 
   // DAILY: Dominant wind direction (10m)
   const windDirDom = wDaily.wind_direction_10m_dominant || [];
+  
+  const sunriseIsoArr = wDaily.sunrise || [];
+  const sunsetIsoArr = wDaily.sunset || [];
+  const dailyScoreMode = getDailyScoreHoursMode();
 
   const todayIso = todayIsoLondon();
   const todayIdx = times.indexOf(todayIso);
@@ -374,8 +486,16 @@ function buildWeekPayloadFromBundle(bundle, place) {
     const wave = (waveMax[i] ?? 0);
     const windKmh = (windMaxKmh[i] ?? 0);
 
-    const score = calculateBoatingScore({ wave_m: wave, wind_kmh: windKmh });
-
+    const score = averageDailyScoreFromHourly(
+      bundle,
+      date,
+      sunriseIsoArr[i] ? String(sunriseIsoArr[i]).slice(11, 16) : null,
+      sunsetIsoArr[i] ? String(sunsetIsoArr[i]).slice(11, 16) : null,
+      dailyScoreMode,
+      wave,
+      windKmh
+    );
+  
     days.push({
       date: date,
       dow: formatDow(date),
@@ -445,7 +565,8 @@ async function buildDayPayloadFromBundle(bundle, place, dayIso) {
   const waveMax = (mDaily.wave_height_max || [])[dayIdx];
   const wavePeriodMax = (mDaily.wave_period_max || [])[dayIdx];
 
-  const dayScore = calculateBoatingScore({ wave_m: waveMax || 0, wind_kmh: windMaxKmh || 0 });
+  const fallbackDayScore = calculateBoatingScore({ wave_m: waveMax || 0, wind_kmh: windMaxKmh || 0 });
+
   const title = formatDow(dayIso) + " " + formatLabel(dayIso);
 
   const wHourly = (bundle && bundle.weather && bundle.weather.hourly) ? bundle.weather.hourly : {};
@@ -570,6 +691,21 @@ async function buildDayPayloadFromBundle(bundle, place, dayIso) {
       };
     });
   }
+  
+  // Daily score is derived from the average of hourly scores.
+  // Mode is controlled in Settings: all hours vs daylight hours.
+  const dailyScoreMode = getDailyScoreHoursMode();
+  const sunriseHHMM = sunrise ? String(sunrise).slice(11, 16) : null;
+  const sunsetHHMM = sunset ? String(sunset).slice(11, 16) : null;
+  
+  const dayScore = averageScoreFromHourRows(
+    dailyScoreMode,
+    hours,
+    sunriseHHMM,
+    sunsetHHMM,
+    fallbackDayScore
+  );
+
 
   return {
     location: (place && place.name) ? place.name : "",

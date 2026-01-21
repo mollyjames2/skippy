@@ -27,10 +27,55 @@ function getCurrentLocationLabel() {
   return name;
 }
 
+// Daily score preference: "all" | "daylight"
+var DAILY_SCORE_MODE_KEY = "skippy.score.dailyHoursMode";
+
+function getDailyScoreMode() {
+  var v = "";
+  try {
+    v = localStorage.getItem(DAILY_SCORE_MODE_KEY) || "";
+  } catch (e) {
+    v = "";
+  }
+  return v === "daylight" ? "daylight" : "all";
+}
+
+function setDailyScoreMode(mode) {
+  try {
+    localStorage.setItem(DAILY_SCORE_MODE_KEY, mode === "daylight" ? "daylight" : "all");
+  } catch (e) {}
+}
+
+function setupDailyScoreToggle() {
+  var root = byId("dailyScoreMode");
+  if (!root) return;
+
+  function applyActive(mode) {
+    var btns = root.querySelectorAll(".segbtn");
+    btns.forEach(function (b) {
+      b.classList.toggle("active", b.getAttribute("data-mode") === mode);
+    });
+  }
+
+  var mode = getDailyScoreMode();
+  applyActive(mode);
+
+  root.addEventListener("click", function (e) {
+    var target = e.target;
+    if (!target) return;
+    if (!target.classList.contains("segbtn")) return;
+
+    var next = target.getAttribute("data-mode") === "daylight" ? "daylight" : "all";
+    setDailyScoreMode(next);
+    applyActive(next);
+  });
+}
 
 document.addEventListener("DOMContentLoaded", function () {
   setText("footerNote", "");
   setText("currentLocationText", "Current location: " + getCurrentLocationLabel());
+
+  setupDailyScoreToggle();
 
   var homeBtn = byId("homeBtn");
   if (homeBtn) {
