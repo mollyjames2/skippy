@@ -407,6 +407,13 @@ function renderTodayTidesCard(dayData) {
     next1 = twoT.a;
     next2 = twoT.b;
   }
+  // If we have only one tide left today, top up the 2nd from tomorrow's model
+  if (next1 && !next2) {
+    var tomorrowModel2 = (dayData && dayData.tides_tomorrow_model) ? dayData.tides_tomorrow_model : [];
+    var twoT2 = findNextTwoTides(tomorrowModel2, 1);
+    next2 = twoT2.a || null;
+  }
+
 
   // Tide footer / source (keep under tides, small)
   var footer = "";
