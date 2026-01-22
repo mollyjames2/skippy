@@ -26,10 +26,25 @@
 
         <div class="spacer"></div>
 
-        <button id="locationBar" class="location-bar" type="button">
+        <button id="locationBar" class="location-bar" type="button" aria-label="Set location">
           <div class="location-left">
-            <span class="location-pin">??</span>
-            <span id="locationLabel" class="location-label">Choose location</span>
+            <!-- SVG pin icon (reliable across iOS/PWA, avoids emoji rendering issues) -->
+            <svg
+              class="location-pin"
+              viewBox="0 0 24 24"
+              width="18"
+              height="18"
+              aria-hidden="true"
+              focusable="false"
+            >
+              <path
+                d="M12 22s7-5.3 7-12a7 7 0 1 0-14 0c0 6.7 7 12 7 12z"
+                fill="currentColor"
+              ></path>
+              <circle cx="12" cy="10" r="2.5" fill="rgba(255,255,255,0.85)"></circle>
+            </svg>
+
+            <span id="locationLabel" class="location-label">Set location</span>
           </div>
         </button>
 
@@ -52,7 +67,7 @@
 
         <div class="spacer"></div>
 
-        <div class="muted small">7-day forecast</div>
+        <div id="forecastLabel" class="muted small">7-day forecast</div>
         <div class="spacer"></div>
 
         <div id="days" class="list"></div>

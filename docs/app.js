@@ -464,33 +464,50 @@ async function main() {
 
   // Show any one-shot toast (eg after location change).
   showToastFromStorage();
+
+  // Wire UI first
   wireHomeTopbar();
   wireLocationBar();
-  renderLocationBar(loc);
 
-
+  // Get location BEFORE using it (your current code called renderLocationBar(loc) too early)
   var loc = getSavedLocation();
 
-    // On first run (or if storage is cleared), stay on Home and prompt for a location.
+  // Always render the location bar label from current state
+  renderLocationBar(loc);
+
+  // On first run (or if storage is cleared), show ONLY the location bar.
   if (!loc) {
-    // Update the location bar text
+    // Make sure the label says "Set location"
     const label = document.getElementById("locationLabel");
     if (label) label.textContent = "Set location";
-  
+
     // Hide content sections
     const tideCard = document.getElementById("tideCard");
     if (tideCard) tideCard.style.display = "none";
-  
+
     const bestCard = document.getElementById("bestCard");
     if (bestCard) bestCard.style.display = "none";
-  
+
     const daysEl = document.getElementById("days");
     if (daysEl) daysEl.innerHTML = "";
-  
+
+    // If you add id="forecastLabel" to the "7-day forecast" label, you can hide it too:
+    const forecastLabel = document.getElementById("forecastLabel");
+    if (forecastLabel) forecastLabel.style.display = "none";
+
     setFooterNote("");
-  
     return;
   }
+
+  // Location exists: ensure the main UI is visible (in case we hid it previously)
+  const tideCard = document.getElementById("tideCard");
+  if (tideCard) tideCard.style.display = "";
+
+  const bestCard = document.getElementById("bestCard");
+  if (bestCard) bestCard.style.display = "";
+
+  const forecastLabel = document.getElementById("forecastLabel");
+  if (forecastLabel) forecastLabel.style.display = "";
 
   // Load Today tides first (fast perceived value)
   try {
@@ -501,7 +518,7 @@ async function main() {
     setHtml(
       "tideCard",
       "" +
-        '<div class="muted small">Todays tides</div>' +
+        '<div class="muted small">Today\'s tides</div>' +
         '<div class="spacer"></div>' +
         '<div class="muted small">Unable to load tides right now.</div>'
     );

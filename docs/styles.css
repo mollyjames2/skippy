@@ -231,13 +231,17 @@ h2 {
 }
 
 .location-pin {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
   opacity: 0.9;
+  color: rgba(232, 238, 247, 0.85); /* SVG uses currentColor */
+  display: block;
+  transform: translateY(0.5px);
 }
 
-.location-right {
-  opacity: 0.65;
-  font-weight: 700;
-}
+
+
 
 
 /* --- Hourly toggle --- */
