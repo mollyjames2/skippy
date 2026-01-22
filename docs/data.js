@@ -23,12 +23,35 @@ const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 // Scoring module expects: "allhours" | "daylight"
 const DAILY_SCORE_HOURS_MODE_KEY = "skippy.score.dailyHoursMode";
 
+// Score tuning
+const SCORE_PROFILE_KEY = "skippy.score.profile"; // "safety" | "standard" | "opportunity"
+const SCORE_TEMP_KEY = "skippy.score.includeTemp"; // "on" | "off"
+
 function getDailyScoreHoursMode() {
   try {
     const v = localStorage.getItem(DAILY_SCORE_HOURS_MODE_KEY);
     return v === "daylight" ? "daylight" : "allhours";
   } catch (e) {
     return "allhours";
+  }
+}
+
+function getScoreProfile() {
+  try {
+    const v = localStorage.getItem(SCORE_PROFILE_KEY);
+    if (v === "safety" || v === "opportunity") return v;
+    return "standard";
+  } catch (e) {
+    return "standard";
+  }
+}
+
+function getScoreTempEnabled() {
+  try {
+    const v = localStorage.getItem(SCORE_TEMP_KEY);
+    return v === "on";
+  } catch (e) {
+    return false;
   }
 }
 
@@ -474,11 +497,28 @@ function buildWeekPayloadFromBundle(bundle, place) {
       sunriseHHMM: sunWin.sunriseHHMM,
       sunsetHHMM: sunWin.sunsetHHMM,
 
+      // scoring options
+      scoreProfile: getScoreProfile(),
+      includeTemp: getScoreTempEnabled(),
+
       weatherHourlyTime: (wHourly && wHourly.time) ? wHourly.time : [],
       weatherHourlyWindKmh: (wHourly && wHourly.wind_speed_10m) ? wHourly.wind_speed_10m : [],
+      weatherHourlyGustKmh: (wHourly && wHourly.wind_gusts_10m) ? wHourly.wind_gusts_10m : [],
+      weatherHourlyVisibilityM: (wHourly && wHourly.visibility) ? wHourly.visibility : [],
+      weatherHourlyPrecipMm: (wHourly && wHourly.precipitation) ? wHourly.precipitation : [],
+      weatherHourlyApparentTempC: (wHourly && wHourly.apparent_temperature) ? wHourly.apparent_temperature : [],
 
       marineHourlyTime: (mHourly && mHourly.time) ? mHourly.time : [],
       marineHourlyWaveM: (mHourly && mHourly.wave_height) ? mHourly.wave_height : [],
+      marineHourlyWavePeriodS: (mHourly && mHourly.wave_period) ? mHourly.wave_period : [],
+      marineHourlyWaveDirectionDeg: (mHourly && mHourly.wave_direction) ? mHourly.wave_direction : [],
+      marineHourlyWindWaveHeightM: (mHourly && mHourly.wind_wave_height) ? mHourly.wind_wave_height : [],
+      marineHourlyWindWaveDirectionDeg: (mHourly && mHourly.wind_wave_direction) ? mHourly.wind_wave_direction : [],
+      marineHourlySwellHeightM: (mHourly && mHourly.swell_wave_height) ? mHourly.swell_wave_height : [],
+      marineHourlySwellDirectionDeg: (mHourly && mHourly.swell_wave_direction) ? mHourly.swell_wave_direction : [],
+      marineHourlyCurrentVelocityMs: (mHourly && mHourly.ocean_current_velocity) ? mHourly.ocean_current_velocity : [],
+      marineHourlyCurrentDirectionDeg: (mHourly && mHourly.ocean_current_direction) ? mHourly.ocean_current_direction : [],
+      marineHourlySeaTempC: (mHourly && mHourly.sea_surface_temperature) ? mHourly.sea_surface_temperature : [],
 
       fallbackScore: fallbackScore,
     });
@@ -581,6 +621,7 @@ async function buildDayPayloadFromBundle(bundle, place, dayIso) {
 
     // HOURLY weather
     const tempC = (wHourly.temperature_2m || [])[i];
+    const apparentC = (wHourly.apparent_temperature || [])[i];
     const codeH = (wHourly.weather_code || [])[i];
 
     const windKmhH = (wHourly.wind_speed_10m || [])[i];
@@ -593,8 +634,42 @@ async function buildDayPayloadFromBundle(bundle, place, dayIso) {
     // HOURLY marine
     const waveMH = (j != null && mHourly.wave_height) ? mHourly.wave_height[j] : null;
     const wavePeriodH = (j != null && mHourly.wave_period) ? mHourly.wave_period[j] : null;
+    const waveDirH = (j != null && mHourly.wave_direction) ? mHourly.wave_direction[j] : null;
 
-    const score = scoreHour({ wave_m: waveMH || 0, wind_kmh: windKmhH || 0 });
+    const windWaveH = (j != null && mHourly.wind_wave_height) ? mHourly.wind_wave_height[j] : null;
+    const windWaveDir = (j != null && mHourly.wind_wave_direction) ? mHourly.wind_wave_direction[j] : null;
+    const swellH = (j != null && mHourly.swell_wave_height) ? mHourly.swell_wave_height[j] : null;
+    const swellDir = (j != null && mHourly.swell_wave_direction) ? mHourly.swell_wave_direction[j] : null;
+
+    const curMs = (j != null && mHourly.ocean_current_velocity) ? mHourly.ocean_current_velocity[j] : null;
+    const curDir = (j != null && mHourly.ocean_current_direction) ? mHourly.ocean_current_direction[j] : null;
+    const seaTC = (j != null && mHourly.sea_surface_temperature) ? mHourly.sea_surface_temperature[j] : null;
+
+    const score = scoreHour({
+      profile: getScoreProfile(),
+      includeTemp: getScoreTempEnabled(),
+
+      wave_m: waveMH || 0,
+      wave_period_s: wavePeriodH || 0,
+      wave_direction_deg: waveDirH,
+
+      wind_kmh: windKmhH || 0,
+      wind_gust_kmh: gustKmhH,
+
+      wind_wave_height_m: windWaveH,
+      wind_wave_direction_deg: windWaveDir,
+      swell_wave_height_m: swellH,
+      swell_wave_direction_deg: swellDir,
+
+      current_velocity_ms: curMs,
+      current_direction_deg: curDir,
+
+      visibility_m: visMH,
+      precip_mm: precipMmH,
+
+      apparent_temp_c: apparentC,
+      sea_temp_c: seaTC,
+    });
 
     hours.push({
       time: t.slice(11, 16),
@@ -663,7 +738,7 @@ async function buildDayPayloadFromBundle(bundle, place, dayIso) {
       tidesMeta = {
         source: modelledTides.length ? "model" : "none",
         message:
-          "High accuracy tidal data not available — using 15 minute modelled tide predictions",
+          "High accuracy tidal data not available - using 15 minute modelled tide predictions",
         updated_at: (rss && rss.updated_at) ? rss.updated_at : null,
         station: (rss && rss.station) ? rss.station : null,
       };
