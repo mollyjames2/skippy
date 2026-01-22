@@ -252,17 +252,29 @@ function svgWave() {
   );
 }
 
-function svgArrowRotated(deg) {
-  if (deg == null || !isFinite(Number(deg))) return "";
-  var d = Number(deg);
+function svgArrowRotated(compassDeg) {
+  if (compassDeg == null || !isFinite(Number(compassDeg))) return "";
+
+  // Convert compass degrees (0=N) to CSS rotation (0=E)
+  var cssDeg = (Number(compassDeg) - 90 + 360) % 360;
 
   return (
-    '<span style="display:inline-flex; align-items:center; margin:0 6px; transform:rotate(' + d + 'deg); transform-origin:50% 50%;">' +
+    '<span style="display:inline-flex; align-items:center; margin:0 6px; ' +
+      'transform:rotate(' + cssDeg + 'deg); transform-origin:50% 50%;">' +
       '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">' +
         '<path d="M4 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
         '<path d="M14 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
-      "</svg>" +
-    "</span>"
+      '</svg>' +
+    '</span>'
+  );
+}
+
+function svgThermometer() {
+  return svgIconWrap(
+    '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">' +
+      '<path d="M10 14.5V5a2 2 0 1 1 4 0v9.5a4 4 0 1 1-4 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<path d="M12 17a1.5 1.5 0 1 0 0 .01" fill="currentColor"/>' +
+    "</svg>"
   );
 }
 
@@ -400,7 +412,7 @@ function renderTodayTidesCard(dayData) {
   var footer = "";
   if (meta && meta.source === "tidetimes") {
     var t = formatUpdatedAtLondon(meta.updated_at);
-    footer = "Data accessed from Tide Times" + (t ? " – last updated " + t : "");
+    footer = "Data accessed from Tide Times" + (t ? " - last updated " + t : "");
   } else {
     footer =
       (meta && meta.message)
@@ -414,6 +426,9 @@ function renderTodayTidesCard(dayData) {
   var windDir = current && current.wind_dir ? current.wind_dir : "-";
   var waveM = current && current.wave_m != null ? current.wave_m : "-";
   var conditionText = current && current.condition ? current.condition : "-";
+  var tempC = current && current.temp_c != null ? current.temp_c : null;
+  var feelsC = current && current.feels_like_c != null ? current.feels_like_c : null;
+
 
   var arrowDeg = windArrowDegFromCompass(windDir);
 
@@ -426,6 +441,17 @@ function renderTodayTidesCard(dayData) {
       " tide in <b>" +
       formatMins(next1.mins) +
       "</b></div>";
+  }
+  var tempLine = "";
+  if (tempC != null || feelsC != null) {
+    tempLine =
+      '<div class="small muted" style="display:flex; align-items:center; gap:6px;">' +
+        svgThermometer() +
+        "<span>" +
+          (tempC != null ? tempC + "&deg;C" : "-") +
+          (feelsC != null ? ' <span style="opacity:0.9;">(feels ' + feelsC + "&deg;C)</span>" : "") +
+        "</span>" +
+      "</div>";
   }
 
   // Layout: left content + right hero
@@ -449,19 +475,26 @@ function renderTodayTidesCard(dayData) {
 
       '    <div class="spacer"></div>' +
       '    <div style="font-weight:700;">Current Conditions</div>' +
-
-      '    <div class="small muted" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">' +
+      
+      
+      
+      
+      
+        '    <div class="small muted" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">' +
       svgWind() +
       '<span>' + windKts + " kts</span>" +
       svgArrowRotated(arrowDeg) +
       '<span>' + windDir + "</span>" +
       "</div>" +
-
+      
+      tempLine +
+      
       '    <div class="small muted" style="display:flex; align-items:center; gap:6px;">' +
       svgWave() +
       "<span>" + waveM + " m</span>" +
       "</div>" +
 
+      
       '    <div class="small muted" style="display:flex; align-items:center; gap:6px;">' +
       svgWeatherFromText(conditionText) +
       "<span>" + String(conditionText).toLowerCase() + "</span>" +

@@ -675,6 +675,8 @@ async function buildDayPayloadFromBundle(bundle, place, dayIso) {
       time: t.slice(11, 16),
       temp_c: round1(tempC),
       condition: weatherCodeToText(codeH),
+      feels_like_c: round1(apparentC),
+
 
       wind_kts: kmhToKnotsInt(windKmhH),
       wind_dir: degToCompass(windDirDegH),
