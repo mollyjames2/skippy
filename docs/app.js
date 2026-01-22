@@ -531,9 +531,10 @@ function renderTodayTidesCard(dayData) {
       '<div class="spacer today-spacer-tight"></div>' +
 
       // 2) Next tides block
+      
       '    <div class="today-section-title">Next tides</div>' +
-      (next1 ? renderTideLine(next1, !next1._fromTomorrow) : '<div class="small muted">-</div>') +
-      (next2 ? renderTideLine(next2, !next2._fromTomorrow) : "")
+      (next1 ? renderTideLine(next1, !(next1._fromTomorrow === true)) : '<div class="small muted">-</div>') +
+      (next2 ? renderTideLine(next2, !(next2._fromTomorrow === true)) : "") +
 
 
       '<div class="spacer today-spacer-tight"></div>' +
