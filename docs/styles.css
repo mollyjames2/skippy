@@ -532,11 +532,12 @@ h2 {
 
 .today-headline{
   font-size: 16px;
-  font-weight: 800; /* reduced from 900 */
+  font-weight: 500;     /* normal weight */
   letter-spacing: -0.01em;
   line-height: 1.18;
-  color: rgba(232, 238, 247, 0.98);
+  color: rgba(232,238,247,0.98);
 }
+
 
 .today-headline-strong{
   font-weight: 800;
@@ -544,12 +545,13 @@ h2 {
 }
 
 .today-section-title{
-  font-weight: 700; /* less bold */
   font-size: 12px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-  color: rgba(232, 238, 247, 0.78);
+  font-weight: 500;          /* not bold */
+  text-transform: none;      /* keep "Next tides" case */
+  letter-spacing: 0.01em;    /* normal reading */
+  color: rgba(232,238,247,0.70);
 }
+
 
 .today-footer{
   font-size: 11px;
@@ -672,7 +674,7 @@ h2 {
 .today-score-stack{
   width: 120px;
   text-align: center;
-  transform: translateY(-20px);
+  transform: translateY(-40px);
 }
 
 /* Text above the circle (not bold) */

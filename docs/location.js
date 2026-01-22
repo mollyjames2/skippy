@@ -144,7 +144,7 @@ function renderPlaces() {
 
   if (status) {
     status.textContent =
-      "Tip: choose the closest anchor point — the forecast model is regional, not micro-local.";
+      "Tip: choose the closest anchor point - the forecast model is regional (8km resolution), not micro-local.";
   }
 }
 
