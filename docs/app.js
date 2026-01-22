@@ -376,19 +376,22 @@ function scoreToWord(score) {
   return "AVOID";
 }
 
-function renderTideLine(e) {
+function renderTideLine(e, showHeight) {
   if (!e) return "";
+  if (showHeight == null) showHeight = true;
+
   var type = e.type || "-";
   var time = e.time || "-";
 
   var hm = "";
-  if (e.height_m != null && isFinite(Number(e.height_m))) {
+  if (showHeight && e.height_m != null && isFinite(Number(e.height_m))) {
     // keep as given (already rounded in data.js)
     hm = " (" + Number(e.height_m).toFixed(1).replace(/\.0$/, "") + "m)";
   }
 
   return '<div class="small muted">' + type + " " + time + hm + "</div>";
 }
+
 
 function findNextTwoTides(tides, dayOffset) {
   // returns { a, b } where a is soonest and b is next soonest
@@ -424,23 +427,34 @@ function renderTodayTidesCard(dayData) {
   // Next two tides:
   // 1) Prefer upcoming tides today
   // 2) If none left today, fall back to tomorrow modelled extrema
+
   var two = findNextTwoTides(tides, 0);
   var next1 = two.a;
   var next2 = two.b;
-
+  
+  // Mark source
+  if (next1) next1._fromTomorrow = false;
+  if (next2) next2._fromTomorrow = false;
+  
+  // If only one tide left today, top up from tomorrow
+  if (next1 && !next2) {
+    var tomorrowModel = dayData.tides_tomorrow_model || [];
+    var twoT = findNextTwoTides(tomorrowModel, 1);
+    if (twoT.a) {
+      next2 = twoT.a;
+      next2._fromTomorrow = true;
+    }
+  }
+  
+  // If none left today, both come from tomorrow
   if (!next1) {
-    var tomorrowModel = (dayData && dayData.tides_tomorrow_model) ? dayData.tides_tomorrow_model : [];
+    var tomorrowModel = dayData.tides_tomorrow_model || [];
     var twoT = findNextTwoTides(tomorrowModel, 1);
     next1 = twoT.a;
     next2 = twoT.b;
+    if (next1) next1._fromTomorrow = true;
+    if (next2) next2._fromTomorrow = true;
   }
-  // If we have only one tide left today, top up the 2nd from tomorrow's model
-  if (next1 && !next2) {
-    var tomorrowModel2 = (dayData && dayData.tides_tomorrow_model) ? dayData.tides_tomorrow_model : [];
-    var twoT2 = findNextTwoTides(tomorrowModel2, 1);
-    next2 = twoT2.a || null;
-  }
-
 
   // Tide footer / source (keep under tides, small)
   var footer = "";
@@ -518,8 +532,9 @@ function renderTodayTidesCard(dayData) {
 
       // 2) Next tides block
       '    <div class="today-section-title">Next tides</div>' +
-      (next1 ? renderTideLine(next1) : '<div class="small muted">-</div>') +
-      (next2 ? renderTideLine(next2) : "") +
+      (next1 ? renderTideLine(next1, !next1._fromTomorrow) : '<div class="small muted">-</div>') +
+      (next2 ? renderTideLine(next2, !next2._fromTomorrow) : "")
+
 
       '<div class="spacer today-spacer-tight"></div>' +
       '    <div class="today-footer">' + footer + "</div>" +
