@@ -166,105 +166,321 @@ function applyCardTone(el, score) {
   if (c) el.classList.add(c);
 }
 
+/* ---------------------------------------------
+   NOW (nearest hour) helpers
+--------------------------------------------- */
 
+function findCurrentHour(hours) {
+  if (!Array.isArray(hours) || !hours.length) return null;
+
+  var now = new Date();
+  var best = null;
+  var bestScore = Infinity;
+
+  for (var i = 0; i < hours.length; i++) {
+    var h = hours[i];
+    if (!h || !h.time) continue;
+
+    var parts = String(h.time).split(":");
+    if (parts.length !== 2) continue;
+    var hh = Number(parts[0]);
+    var mm = Number(parts[1]);
+    if (!isFinite(hh) || !isFinite(mm)) continue;
+
+    var t = new Date(now);
+    t.setHours(hh, mm, 0, 0);
+
+    var delta = t.getTime() - now.getTime();
+
+    // Prefer next future hour; otherwise nearest past.
+    var score = delta >= 0 ? delta : (Math.abs(delta) + 24 * 60 * 60 * 1000);
+
+    if (score < bestScore) {
+      bestScore = score;
+      best = h;
+    }
+  }
+
+  return best;
+}
+
+// Your hourly rows currently contain wind_dir as compass text, not degrees.
+// We map compass -> degrees so we can rotate an SVG arrow correctly.
+function compassToDeg(compass) {
+  var c = String(compass || "").toUpperCase().trim();
+  var map = {
+    N: 0, NNE: 22.5, NE: 45, ENE: 67.5,
+    E: 90, ESE: 112.5, SE: 135, SSE: 157.5,
+    S: 180, SSW: 202.5, SW: 225, WSW: 247.5,
+    W: 270, WNW: 292.5, NW: 315, NNW: 337.5,
+  };
+  return (map[c] != null) ? map[c] : null;
+}
+
+// Open-Meteo wind direction is "coming from".
+// Arrow should show where it is travelling (to) => +180.
+function windArrowDegFromCompass(compass) {
+  var from = compassToDeg(compass);
+  if (from == null) return null;
+  return (from + 180) % 360;
+}
+
+/* ---------------------------------------------
+   SVG icons (no emojis)
+--------------------------------------------- */
+
+function svgIconWrap(svg) {
+  // baseline alignment helper (works well with your "small muted" text)
+  return '<span style="display:inline-flex; align-items:center; line-height:1; margin-right:6px;">' + svg + "</span>";
+}
+
+function svgWind() {
+  return svgIconWrap(
+    '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">' +
+      '<path d="M3 8h10a2 2 0 1 0-2-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+      '<path d="M3 12h14a2 2 0 1 1-2 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+      '<path d="M3 16h7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+    "</svg>"
+  );
+}
+
+function svgWave() {
+  return svgIconWrap(
+    '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">' +
+      '<path d="M2 14c2-2 4-2 6 0s4 2 6 0 4-2 6 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+    "</svg>"
+  );
+}
+
+function svgArrowRotated(deg) {
+  if (deg == null || !isFinite(Number(deg))) return "";
+  var d = Number(deg);
+
+  return (
+    '<span style="display:inline-flex; align-items:center; margin:0 6px; transform:rotate(' + d + 'deg); transform-origin:50% 50%;">' +
+      '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">' +
+        '<path d="M4 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+        '<path d="M14 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+      "</svg>" +
+    "</span>"
+  );
+}
+
+function svgWeatherFromText(conditionText) {
+  var c = String(conditionText || "").toLowerCase();
+
+  // Your condition strings are produced by weatherCodeToText in data.js
+  // Examples: Clear, Mostly clear, Cloudy, Fog, Drizzle/Rain, Showers, Thunder, Snow, Mixed
+  if (c.includes("clear")) {
+    return svgIconWrap(
+      '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">' +
+        '<circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/>' +
+        '<path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M19.8 4.2l-2.1 2.1M6.3 17.7l-2.1 2.1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+      "</svg>"
+    );
+  }
+
+  if (c.includes("fog")) {
+    return svgIconWrap(
+      '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">' +
+        '<path d="M4 10h16M6 14h14M5 18h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+      "</svg>"
+    );
+  }
+
+  if (c.includes("thunder")) {
+    return svgIconWrap(
+      '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">' +
+        '<path d="M6 14h11a4 4 0 0 0 0-8 5 5 0 0 0-9-2" fill="none" stroke="currentColor" stroke-width="2"/>' +
+        '<path d="M12 12l-3 6h3l-1 4 5-8h-3l1-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>' +
+      "</svg>"
+    );
+  }
+
+  if (c.includes("snow")) {
+    return svgIconWrap(
+      '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">' +
+        '<path d="M6 14h11a4 4 0 0 0 0-8 5 5 0 0 0-9-2" fill="none" stroke="currentColor" stroke-width="2"/>' +
+        '<path d="M9 18h0M12 18h0M15 18h0" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>' +
+      "</svg>"
+    );
+  }
+
+  if (c.includes("showers") || c.includes("drizzle") || c.includes("rain")) {
+    return svgIconWrap(
+      '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">' +
+        '<path d="M6 14h11a4 4 0 0 0 0-8 5 5 0 0 0-9-2" fill="none" stroke="currentColor" stroke-width="2"/>' +
+        '<path d="M8 17v3M12 17v3M16 17v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+      "</svg>"
+    );
+  }
+
+  // Default: cloudy/mixed
+  return svgIconWrap(
+    '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">' +
+      '<path d="M6 16h12a4 4 0 0 0 0-8 5 5 0 0 0-9-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+    "</svg>"
+  );
+}
+
+/* ---------------------------------------------
+   Today card renderer (updated)
+--------------------------------------------- */
+
+function scoreToWord(score) {
+  var s = Number(score);
+  if (!isFinite(s)) return "-";
+  if (s >= 90) return "EXCELLENT";
+  if (s >= 60) return "GOOD";
+  if (s >= 40) return "OK";
+  if (s >= 20) return "POOR";
+  return "AVOID";
+}
+
+function renderTideLine(e) {
+  if (!e) return "";
+  var type = e.type || "-";
+  var time = e.time || "-";
+
+  var hm = "";
+  if (e.height_m != null && isFinite(Number(e.height_m))) {
+    // keep as given (already rounded in data.js)
+    hm = " (" + Number(e.height_m).toFixed(1).replace(/\.0$/, "") + "m)";
+  }
+
+  return '<div class="small muted">' + type + " " + time + hm + "</div>";
+}
+
+function findNextTwoTides(tides, dayOffset) {
+  // returns { a, b } where a is soonest and b is next soonest
+  var candidates = [];
+  (tides || []).forEach(function (e) {
+    if (!e || !e.time) return;
+    var mins = minsUntilHHMM(e.time, dayOffset);
+    if (mins == null) return;
+    candidates.push({
+      type: e.type || "-",
+      time: e.time,
+      height_m: e.height_m,
+      mins: mins,
+      is_tomorrow: dayOffset === 1,
+    });
+  });
+
+  candidates.sort(function (x, y) { return x.mins - y.mins; });
+
+  return {
+    a: candidates[0] || null,
+    b: candidates[1] || null,
+  };
+}
 
 function renderTodayTidesCard(dayData) {
   var tides = (dayData && dayData.tides) ? dayData.tides : [];
   var meta = (dayData && dayData.tides_meta) ? dayData.tides_meta : null;
 
-  // Title line (optionally show station name)
-  var stationName = meta && meta.station && meta.station.name ? meta.station.name : "";
-  var title = "Today at a glance"
-  //var title = "Today at a glance" + (stationName ? " (" + stationName + ")" : "");
-  var todayScore = dayData && dayData.summary ? dayData.summary.score : null;
+  var score = dayData && dayData.summary ? dayData.summary.score : null;
+  var ratingWord = scoreToWord(score);
 
-  // Next tide:
-  // 1) Prefer the next tide event *today* from today's event list (do not roll past times into tomorrow)
-  // 2) If there are none left today, fall back to tomorrow's *modelled* extrema (15-min curve)
-  var next = findNextTideEvent(tides, 0);
-  if (!next) {
+  // Next two tides:
+  // 1) Prefer upcoming tides today
+  // 2) If none left today, fall back to tomorrow modelled extrema
+  var two = findNextTwoTides(tides, 0);
+  var next1 = two.a;
+  var next2 = two.b;
+
+  if (!next1) {
     var tomorrowModel = (dayData && dayData.tides_tomorrow_model) ? dayData.tides_tomorrow_model : [];
-    if (tomorrowModel && tomorrowModel.length) {
-      next = findNextTideEvent(tomorrowModel, 1);
-    }
+    var twoT = findNextTwoTides(tomorrowModel, 1);
+    next1 = twoT.a;
+    next2 = twoT.b;
   }
 
-  // Footer / caveat message
+  // Tide footer / source (keep under tides, small)
   var footer = "";
   if (meta && meta.source === "tidetimes") {
     var t = formatUpdatedAtLondon(meta.updated_at);
-    footer = "Data accessed from Tide Times" + (t ? " - last updated " + t : "");
+    footer = "Data accessed from Tide Times" + (t ? " – last updated " + t : "");
   } else {
-    // Model fallback / none
     footer =
       (meta && meta.message)
         ? meta.message
         : "High accuracy tidal data not available - using 15 minute modelled tide predictions";
   }
 
-  // Render events (up to 6)
-  var lines = "";
-  if (tides && tides.length) {
-    lines = tides
-      .slice(0, 6)
-      .map(function (e) {
-        var hm = (e.height_m != null && isFinite(Number(e.height_m)))
-          ? " (" + Number(e.height_m).toFixed(2).replace(/\.00$/, "") + "m)"
-          : "";
-        return (
-          '<div class="muted small">' +
-          (e.type || "-") +
-          " Tide: <b>" +
-          (e.time || "-") +
-          "</b>" +
-          hm +
-          "</div>"
-        );
-      })
-      .join("");
-  } else {
-    lines = '<div class="muted small">No tide data available.</div>';
-  }
+  // Current conditions from nearest-hour
+  var current = findCurrentHour(dayData && dayData.hours ? dayData.hours : []);
+  var windKts = current && current.wind_kts != null ? current.wind_kts : "-";
+  var windDir = current && current.wind_dir ? current.wind_dir : "-";
+  var waveM = current && current.wave_m != null ? current.wave_m : "-";
+  var conditionText = current && current.condition ? current.condition : "-";
+
+  var arrowDeg = windArrowDegFromCompass(windDir);
+
   var nextLine = "";
-  if (next) {
+  if (next1) {
+    // e.g. "Next high tide in 4h 12m"
     nextLine =
-      '<div class="row">' +
-      '  <div>' +
-      '    <div style="font-weight:800; font-size:18px;">Next: ' +
-      (next.type || "-") +
-      ' tide</div>' +
-      '    <div class="muted small">In ' +
-      formatMins(next.mins) +
-      " - at <b>" +
-      next.time +
-      "</b></div>" +
-      "  </div>" +
-      '  <div class="hero-score">' + (todayScore == null ? "-" : todayScore) + "</div>" +
-      "</div>" +
-      '<div class="spacer"></div>';
-  } else {
-    nextLine =
-      '<div class="row">' +
-      '  <div class="muted small">Next tide: -</div>' +
-      '  <div class="hero-score">' + (todayScore == null ? "-" : todayScore) + "</div>" +
-      "</div>" +
-      '<div class="spacer"></div>';
+      '<div class="small muted">Next ' +
+      String(next1.type || "-").toLowerCase() +
+      " tide in <b>" +
+      formatMins(next1.mins) +
+      "</b></div>";
   }
-  
+
+  // Layout: left content + right hero
   setHtml(
     "tideCard",
     "" +
-      '<div class="muted small">' + title + "</div>" +
+      '<div class="muted small">TODAY ON THE WATER</div>' +
       '<div class="spacer"></div>' +
-      nextLine +
-      lines +
-      '<div class="spacer"></div>' +
-      '<div class="muted small">' + footer + "</div>"
+      '<div class="row" style="align-items:flex-start;">' +
+      '  <div style="flex:1;">' +
+
+      '    <div style="font-weight:700;">Next tides</div>' +
+      (next1 ? renderTideLine(next1) : '<div class="small muted">-</div>') +
+      (next2 ? renderTideLine(next2) : "") +
+
+      '    <div class="spacer"></div>' +
+      (nextLine || "") +
+
+      '    <div class="spacer"></div>' +
+      '    <div class="small muted" style="opacity:0.9;">' + footer + "</div>" +
+
+      '    <div class="spacer"></div>' +
+      '    <div style="font-weight:700;">Current Conditions</div>' +
+
+      '    <div class="small muted" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">' +
+      svgWind() +
+      '<span>' + windKts + " kts</span>" +
+      svgArrowRotated(arrowDeg) +
+      '<span>' + windDir + "</span>" +
+      "</div>" +
+
+      '    <div class="small muted" style="display:flex; align-items:center; gap:6px;">' +
+      svgWave() +
+      "<span>" + waveM + " m</span>" +
+      "</div>" +
+
+      '    <div class="small muted" style="display:flex; align-items:center; gap:6px;">' +
+      svgWeatherFromText(conditionText) +
+      "<span>" + String(conditionText).toLowerCase() + "</span>" +
+      "</div>" +
+
+      "  </div>" +
+
+      '  <div style="text-align:right; padding-left:12px;">' +
+      '    <div style="font-weight:800; letter-spacing:0.06em;">' + ratingWord + "</div>" +
+      '    <div style="font-size:28px; font-weight:800; line-height:1.05;">' +
+      (score == null ? "-" : score) +
+      "</div>" +
+      "  </div>" +
+      "</div>"
   );
-  var todayScore = dayData && dayData.summary ? dayData.summary.score : null;
-  applyCardTone(document.getElementById("tideCard"), todayScore);
-  // Make the whole "Today's tides" card open the Day view for today.
-  // (Ignore clicks on any links inside the card.)
+
+  applyCardTone(document.getElementById("tideCard"), score);
+
+  // Make the whole "Today" card open the Day view for today.
   var tideEl = document.getElementById("tideCard");
   if (tideEl && !tideEl.dataset.daylinkWired) {
     tideEl.dataset.daylinkWired = "1";
@@ -278,7 +494,6 @@ function renderTodayTidesCard(dayData) {
       window.location.href = "./day.html?date=" + encodeURIComponent(date);
     });
   }
-
 }
 
 /* ---------------------------------------------
