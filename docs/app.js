@@ -335,6 +335,33 @@ function svgWeatherFromText(conditionText) {
   );
 }
 
+// Remove any existing tone-* classes then add the one we want
+function forceToneClass(el, toneClass) {
+  if (!el) return;
+  el.classList.remove("tone-excellent", "tone-good", "tone-ok", "tone-poor", "tone-avoid");
+  if (toneClass) el.classList.add(toneClass);
+}
+
+// Ensures no legacy click handler survives between renders
+function setBestCardClick(bestEl, handlerOrNull) {
+  if (!bestEl) return;
+
+  // Remove previous handler if one exists
+  if (bestEl._bestClickHandler) {
+    bestEl.removeEventListener("click", bestEl._bestClickHandler);
+    bestEl._bestClickHandler = null;
+  }
+
+  // Add new handler if provided
+  if (handlerOrNull) {
+    bestEl._bestClickHandler = handlerOrNull;
+    bestEl.style.cursor = "pointer";
+    bestEl.addEventListener("click", handlerOrNull);
+  } else {
+    bestEl.style.cursor = "default";
+  }
+}
+
 /* ---------------------------------------------
    Today card renderer (updated)
 --------------------------------------------- */
@@ -628,36 +655,121 @@ function renderWeek(data, loc) {
     loc && loc.name ? loc.name : (data.location || "South West UK")
   );
 
-  var best = data.best_day || null;
-  if (best) {
-    setHtml(
-      "bestCard",
-      "" +
-        '<div class="muted small">Best day this week</div>' +
-        '<div class="spacer"></div>' +
-        '<div class="row">' +
-        "  <div>" +
-        '    <div style="font-weight:800; font-size:18px;">' +
-        best.dow +
-        " " +
-        best.label +
-        "</div>" +
-        '    <div class="muted small">Best window: ' +
-        best.best_time.start +
-        " - " +
-        best.best_time.end +
-        "</div>" +
-        '  <div class="hero-score">' + best.score + "</div>" +
-        "</div>"
-    );
-    applyCardTone(document.getElementById("bestCard"), best.score);
+  var bestEl = document.getElementById("bestCard");
 
-  } else {
-    setHtml("bestCard", '<div class="muted small">No data</div>');
-    applyCardTone(document.getElementById("bestCard"), null);
-
+  // ---- Helpers scoped to this function (no other file edits needed) ----
+  function forceToneClass(el, toneClass) {
+    if (!el) return;
+    el.classList.remove("tone-excellent", "tone-good", "tone-ok", "tone-poor", "tone-avoid");
+    if (toneClass) el.classList.add(toneClass);
   }
 
+  // Ensures no legacy click handler survives between renders
+  function setBestCardClick(el, handlerOrNull) {
+    if (!el) return;
+
+    if (el._bestClickHandler) {
+      el.removeEventListener("click", el._bestClickHandler);
+      el._bestClickHandler = null;
+    }
+
+    if (handlerOrNull) {
+      el._bestClickHandler = handlerOrNull;
+      el.style.cursor = "pointer";
+      el.addEventListener("click", handlerOrNull);
+    } else {
+      el.style.cursor = "default";
+    }
+  }
+
+  // Always clear any previous bestCard click handler first (prevents stale links)
+  setBestCardClick(bestEl, null);
+
+  // ---- Best day this week card (recommendation) ----
+  var daysArr = (data && data.days) ? data.days : [];
+
+  if (!bestEl) {
+    // no best card element, continue rendering the rest
+  } else if (!daysArr.length) {
+    setHtml("bestCard", '<div class="muted small">No data</div>');
+    forceToneClass(bestEl, null);
+  } else {
+    var allAvoid = daysArr.every(function (d) {
+      return scoreToWord(d && d.score) === "AVOID";
+    });
+
+    var allPoorOrAvoid = daysArr.every(function (d) {
+      var w = scoreToWord(d && d.score);
+      return (w === "POOR" || w === "AVOID");
+    });
+
+    if (allAvoid) {
+      setHtml("bestCard", '<div class="best-week-message">Honestly, just stay home!</div>');
+      forceToneClass(bestEl, "tone-avoid");
+      // no click
+    } else if (allPoorOrAvoid) {
+      setHtml("bestCard", '<div class="best-week-message">I wouldn’t bother…</div>');
+      forceToneClass(bestEl, "tone-poor");
+      // no click
+    } else {
+      // Find best day from the actual week days (so we have a date for navigation)
+      var bestDay = daysArr.reduce(function (acc, d) {
+        if (!d || d.score == null) return acc;
+        if (!acc || d.score > acc.score) return d;
+        return acc;
+      }, null);
+
+      if (!bestDay) {
+        setHtml("bestCard", '<div class="muted small">No data</div>');
+        forceToneClass(bestEl, null);
+      } else {
+        var toneClass = toneClassForScore(bestDay.score); // "tone-ok" etc
+        var ratingWord = scoreToWord(bestDay.score);
+
+        setHtml(
+          "bestCard",
+          "" +
+            // Title: same component as Today card title
+            '<div class="today-title">Best day this week</div>' +
+            '<div class="spacer"></div>' +
+
+            '<div class="best-grid">' +
+            '  <div class="best-left">' +
+            '    <div class="best-dayline">' +
+                  (bestDay.dow || "") + (bestDay.dow ? " " : "") + (bestDay.label || "") +
+            "    </div>" +
+            '    <div class="best-subtle">Tap to explore</div>' +
+            "  </div>" +
+
+            // Badge: reuse Today badge (label + OK + circle number)
+            '  <div class="today-score-wrap">' +
+            '    <div class="today-score-stack">' +
+            '      <div class="today-score-label">Boating score</div>' +
+            '      <div class="today-score-word">' + ratingWord + "</div>" +
+            '      <div class="today-score-circle ' + toneClass + '">' +
+            '        <div class="today-score-num">' + bestDay.score + "</div>" +
+            "      </div>" +
+            "    </div>" +
+            "  </div>" +
+            "</div>"
+        );
+
+        // Tint best card based on the recommended day
+        forceToneClass(bestEl, toneClass);
+
+        // Click ? recommended day page
+        setBestCardClick(bestEl, function (e) {
+          if (e && e.target) {
+            var a = e.target.closest ? e.target.closest("a") : null;
+            if (a) return;
+          }
+          window.location.href = "./day.html?date=" + encodeURIComponent(bestDay.date);
+        });
+      }
+    }
+  }
+
+  // ---- Existing days list rendering (unchanged) ----
   var daysEl = document.getElementById("days");
   if (!daysEl) return;
 
@@ -729,6 +841,7 @@ function renderWeek(data, loc) {
 
   setFooterNote("");
 }
+
 
 function maybeShowSplash() {
   var splash = document.getElementById("splash");
