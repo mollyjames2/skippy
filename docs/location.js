@@ -55,11 +55,9 @@ function wireTopbar() {
   if (backBtn) {
     backBtn.addEventListener("click", function () {
       // If we came from settings, go back there; otherwise go home.
-      if (from === "settings") {
-        window.location.href = "./settings.html";
-      } else {
-        window.location.href = "./index.html";
-      }
+      if (from === "settings") window.location.href = "./settings.html";
+      else window.location.href = "./index.html";
+
     });
   }
 

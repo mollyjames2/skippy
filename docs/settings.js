@@ -73,7 +73,7 @@ function setupDailyScoreToggle() {
 
 document.addEventListener("DOMContentLoaded", function () {
   setText("footerNote", "");
-  setText("currentLocationText", "Current location: " + getCurrentLocationLabel());
+  
 
   setupDailyScoreToggle();
 

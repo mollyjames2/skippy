@@ -28,6 +28,27 @@ function wireHomeTopbar() {
   }
 }
 
+function wireLocationBar() {
+  var bar = document.getElementById("locationBar");
+  if (!bar) return;
+
+  bar.addEventListener("click", function () {
+    window.location.href = "./location.html?from=home";
+  });
+}
+
+function renderLocationBar(loc) {
+  var label = document.getElementById("locationLabel");
+  if (!label) return;
+
+  if (!loc || !loc.name) {
+    label.textContent = "Choose location";
+    return;
+  }
+
+  label.textContent = loc.name;
+}
+
 /* ---------------------------------------------
    London time helpers
 --------------------------------------------- */
@@ -444,38 +465,30 @@ async function main() {
   // Show any one-shot toast (eg after location change).
   showToastFromStorage();
   wireHomeTopbar();
+  wireLocationBar();
+  renderLocationBar(loc);
+
 
   var loc = getSavedLocation();
 
-  // On first run (or if storage is cleared), stay on Home and prompt for a location.
+    // On first run (or if storage is cleared), stay on Home and prompt for a location.
   if (!loc) {
-    setText("location", "No location selected");
-
-    setHtml(
-      "tideCard",
-      "" +
-        '<div class="muted small">Today\'s tides</div>' +
-        '<div class="spacer"></div>' +
-        '<div class="muted small">Choose a location to see today\'s tides.</div>' +
-        '<div class="spacer"></div>' +
-        '<a class="btn" href="./location.html">Choose location</a>'
-    );
-
-    setHtml(
-      "bestCard",
-      "" +
-        '<div class="muted small">Choose your location to see the best boating days this week.</div>' +
-        '<div class="spacer"></div>' +
-        '<a class="btn" href="./location.html">Choose location</a>'
-    );
-
-    var daysEl = document.getElementById("days");
-    if (daysEl) {
-      daysEl.innerHTML =
-        '<div class="card"><div class="muted small">Select a location to load the 7-day forecast.</div></div>';
-    }
-
+    // Update the location bar text
+    const label = document.getElementById("locationLabel");
+    if (label) label.textContent = "Set location";
+  
+    // Hide content sections
+    const tideCard = document.getElementById("tideCard");
+    if (tideCard) tideCard.style.display = "none";
+  
+    const bestCard = document.getElementById("bestCard");
+    if (bestCard) bestCard.style.display = "none";
+  
+    const daysEl = document.getElementById("days");
+    if (daysEl) daysEl.innerHTML = "";
+  
     setFooterNote("");
+  
     return;
   }
 

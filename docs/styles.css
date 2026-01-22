@@ -190,6 +190,56 @@ h2 {
   gap: 12px;
 }
 
+.location-bar {
+  width: 100%;
+  max-width: 420px;
+  margin: 0 auto;
+  padding: 14px 16px;
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 16px;
+
+  color: rgba(232, 238, 247, 0.95);
+  font-size: 14px;
+  font-weight: 700;
+
+  cursor: pointer;
+}
+
+.location-bar:active {
+  transform: scale(0.99);
+}
+
+.location-left {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.location-label {
+  font-weight: 800;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.location-pin {
+  opacity: 0.9;
+}
+
+.location-right {
+  opacity: 0.65;
+  font-weight: 700;
+}
+
+
 /* --- Hourly toggle --- */
 .segmented {
   display: flex;
