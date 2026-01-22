@@ -16,7 +16,7 @@ export const OPEN_METEO = {
     hourly: [
       "temperature_2m",
       "apparent_temperature",
-      "pressure_msk_surface_pressure",
+      "pressure_msl_surface_pressure",
       "precipitation_probability",
       "precipitation",
       "weather_code",
@@ -25,7 +25,6 @@ export const OPEN_METEO = {
       "wind_speed_10m",
       "wind_direction_10m",
       "wind_gusts_10m",
-      "pressure_msl",
     ],
     daily: [
       "weather_code",
