@@ -1,163 +1,149 @@
-// docs/settings.js
+"use strict";
 
+function byId(id) {
+  return document.getElementById(id);
+}
+
+function setText(id, text) {
+  var el = byId(id);
+  if (!el) return;
+  el.textContent = text;
+}
+
+// ----------------------------
 // Storage keys
-const DAILY_SCORE_HOURS_MODE_KEY = "skippy.score.dailyHoursMode"; // "all" | "daylight"
-const SCORE_PROFILE_KEY = "skippy.score.profile"; // "safety" | "standard" | "opportunity"
-const SCORE_TEMP_KEY = "skippy.score.includeTemp"; // "on" | "off"
+// ----------------------------
 
-// Defaults
-const DEFAULT_DAILY_HOURS_MODE = "all";
-const DEFAULT_SCORE_PROFILE = "standard";
-const DEFAULT_SCORE_TEMP = "off";
+// Daily score preference: "all" | "daylight"
+var DAILY_SCORE_MODE_KEY = "skippy.score.dailyHoursMode";
 
-function $(sel) {
-  return document.querySelector(sel);
-}
+// Scoring profile: "safety" | "standard" | "opportunity"
+var SCORE_PROFILE_KEY = "skippy.score.profile";
 
-function clampToAllowed(value, allowed, fallback) {
-  if (allowed.includes(value)) return value;
-  return fallback;
-}
+// Temperature toggle: "on" | "off"
+var SCORE_TEMP_KEY = "skippy.score.includeTemp";
 
-/* -----------------------------
-   Daily hours mode (existing)
------------------------------- */
+// ----------------------------
+// Getters / setters
+// ----------------------------
 
-function getDailyHoursMode() {
+function getDailyScoreMode() {
+  var v = "";
   try {
-    const v = localStorage.getItem(DAILY_SCORE_HOURS_MODE_KEY);
-    return clampToAllowed(v, ["all", "daylight"], DEFAULT_DAILY_HOURS_MODE);
+    v = localStorage.getItem(DAILY_SCORE_MODE_KEY) || "";
   } catch (e) {
-    return DEFAULT_DAILY_HOURS_MODE;
+    v = "";
   }
+  return v === "daylight" ? "daylight" : "all";
 }
 
-function setDailyHoursMode(v) {
+function setDailyScoreMode(mode) {
   try {
-    localStorage.setItem(DAILY_SCORE_HOURS_MODE_KEY, v);
+    localStorage.setItem(DAILY_SCORE_MODE_KEY, mode === "daylight" ? "daylight" : "all");
   } catch (e) {}
 }
-
-/* -----------------------------
-   Score profile (new)
------------------------------- */
 
 function getScoreProfile() {
+  var v = "";
   try {
-    const v = localStorage.getItem(SCORE_PROFILE_KEY);
-    return clampToAllowed(v, ["safety", "standard", "opportunity"], DEFAULT_SCORE_PROFILE);
+    v = localStorage.getItem(SCORE_PROFILE_KEY) || "";
   } catch (e) {
-    return DEFAULT_SCORE_PROFILE;
+    v = "";
   }
+  if (v === "safety" || v === "opportunity") return v;
+  return "standard";
 }
 
-function setScoreProfile(v) {
+function setScoreProfile(profile) {
+  var p = profile === "safety" || profile === "opportunity" ? profile : "standard";
   try {
-    localStorage.setItem(SCORE_PROFILE_KEY, v);
+    localStorage.setItem(SCORE_PROFILE_KEY, p);
   } catch (e) {}
 }
 
-/* -----------------------------
-   Include temperature (new)
------------------------------- */
-
-function getIncludeTemp() {
+function getScoreTemp() {
+  var v = "";
   try {
-    const v = localStorage.getItem(SCORE_TEMP_KEY);
-    return clampToAllowed(v, ["on", "off"], DEFAULT_SCORE_TEMP);
+    v = localStorage.getItem(SCORE_TEMP_KEY) || "";
   } catch (e) {
-    return DEFAULT_SCORE_TEMP;
+    v = "";
   }
+  return v === "on" ? "on" : "off";
 }
 
-function setIncludeTemp(v) {
+function setScoreTemp(v) {
   try {
-    localStorage.setItem(SCORE_TEMP_KEY, v);
+    localStorage.setItem(SCORE_TEMP_KEY, v === "on" ? "on" : "off");
   } catch (e) {}
 }
 
-/* -----------------------------
-   Segmented controls helpers
------------------------------- */
+// ----------------------------
+// Segmented controls helpers
+// ----------------------------
 
-function initSegment(groupEl, value, onChange) {
-  if (!groupEl) return;
+function setupSegmented(rootId, btnAttr, getValue, setValue) {
+  var root = byId(rootId);
+  if (!root) return;
 
-  const buttons = Array.from(groupEl.querySelectorAll("[data-value]"));
-
-  function apply(v) {
-    buttons.forEach((btn) => {
-      const isOn = btn.getAttribute("data-value") === v;
-      btn.classList.toggle("is-active", isOn);
-      btn.setAttribute("aria-pressed", isOn ? "true" : "false");
+  function applyActive(value) {
+    var btns = root.querySelectorAll(".segbtn");
+    btns.forEach(function (b) {
+      b.classList.toggle("active", b.getAttribute(btnAttr) === value);
     });
   }
 
-  function handleClick(e) {
-    const btn = e.target.closest("[data-value]");
-    if (!btn) return;
-    const v = btn.getAttribute("data-value");
-    if (!v) return;
-    apply(v);
-    onChange(v);
-  }
+  // initial
+  var current = getValue();
+  applyActive(current);
 
-  groupEl.addEventListener("click", handleClick);
+  // click
+  root.addEventListener("click", function (e) {
+    var target = e.target;
+    if (!target) return;
+    if (!target.classList.contains("segbtn")) return;
 
-  // keyboard support (left/right)
-  groupEl.addEventListener("keydown", (e) => {
-    if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
-    e.preventDefault();
-
-    const activeIdx = buttons.findIndex((b) => b.classList.contains("is-active"));
-    if (activeIdx < 0) return;
-
-    const nextIdx =
-      e.key === "ArrowRight"
-        ? Math.min(activeIdx + 1, buttons.length - 1)
-        : Math.max(activeIdx - 1, 0);
-
-    const next = buttons[nextIdx];
+    var next = target.getAttribute(btnAttr);
     if (!next) return;
-    const v = next.getAttribute("data-value");
-    if (!v) return;
 
-    apply(v);
-    onChange(v);
-    next.focus();
+    setValue(next);
+    applyActive(getValue());
   });
-
-  apply(value);
 }
 
-/* -----------------------------
-   Boot
------------------------------- */
-
-function init() {
-  // Existing daily mode segment (if present)
-  const dailyModeEl = $("#dailyScoreHoursMode");
-  if (dailyModeEl) {
-    initSegment(dailyModeEl, getDailyHoursMode(), (v) => {
-      setDailyHoursMode(v);
-    });
-  }
-
-  // New: scoring profile
-  const profileEl = $("#scoreProfile");
-  if (profileEl) {
-    initSegment(profileEl, getScoreProfile(), (v) => {
-      setScoreProfile(v);
-    });
-  }
-
-  // New: include temperature
-  const tempEl = $("#scoreIncludeTemp");
-  if (tempEl) {
-    initSegment(tempEl, getIncludeTemp(), (v) => {
-      setIncludeTemp(v);
-    });
-  }
+function setupDailyScoreToggle() {
+  setupSegmented("dailyScoreMode", "data-mode", getDailyScoreMode, setDailyScoreMode);
 }
 
-document.addEventListener("DOMContentLoaded", init);
+function setupScoreProfileToggle() {
+  setupSegmented("scoreProfile", "data-profile", getScoreProfile, setScoreProfile);
+}
+
+function setupScoreTempToggle() {
+  setupSegmented("scoreTemp", "data-temp", getScoreTemp, setScoreTemp);
+}
+
+// ----------------------------
+// Boot
+// ----------------------------
+
+document.addEventListener("DOMContentLoaded", function () {
+  setText("footerNote", "");
+
+  setupDailyScoreToggle();
+  setupScoreProfileToggle();
+  setupScoreTempToggle();
+
+  var homeBtn = byId("homeBtn");
+  if (homeBtn) {
+    homeBtn.addEventListener("click", function () {
+      window.location.href = "./index.html";
+    });
+  }
+
+  var aboutBtn = byId("aboutBtn");
+  if (aboutBtn) {
+    aboutBtn.addEventListener("click", function () {
+      window.location.href = "./about.html?from=settings";
+    });
+  }
+});

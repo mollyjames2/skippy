@@ -1,111 +1,107 @@
-<!-- docs/settings.html -->
 <!doctype html>
 <html lang="en">
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Settings • Skippy</title>
-
+    <title>Skippy - Settings</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
-
   <body>
-    <header class="topbar">
-      <a class="topbar__back" href="./index.html" aria-label="Back">?</a>
-      <div class="topbar__title">Settings</div>
-      <div class="topbar__spacer"></div>
-    </header>
+    <div class="container">
+      <div class="topbar">
+        <img src="./assets/logo_horz.png" alt="Skippy" class="logo-horz" />
+        <div style="flex:1"></div>
+        <button id="homeBtn" class="btn" type="button">Home</button>
+      </div>
 
-    <main class="page">
-      <!-- Existing settings sections (if any) remain unchanged above/below.
-           This file adds a Boating Score section without breaking existing markup. -->
+      <!-- Boating score card -->
+      <div class="card">
+        <div style="font-weight:800; margin-bottom:6px;">Boating Score</div>
+        <div class="muted small">
+          Adjust how Skippy calculates the boating score for small coastal boats.
+        </div>
 
-      <section class="card">
-        <h2 class="card__title">Boating score</h2>
+        <div class="spacer"></div>
 
-        <!-- Existing: Daily score hours mode -->
-        <div class="setting">
-          <div class="setting__label">
-            <div class="setting__name">Daily score hours</div>
-            <div class="setting__hint">Use all hours or only daylight hours for daily scores</div>
+        <!-- Daily score hours -->
+        <div class="row" style="align-items:flex-start;">
+          <div class="muted small" style="flex:1;">
+            Daily score uses
+            <div class="muted small" style="margin-top:4px; opacity:0.9;">
+              Use all hours or only daylight hours when calculating the daily score.
+            </div>
           </div>
 
-          <div
-            id="dailyScoreHoursMode"
-            class="segmented"
-            role="group"
-            aria-label="Daily score hours"
-          >
-            <button type="button" class="segmented__btn" data-value="all" aria-pressed="false">
-              All hours
-            </button>
-            <button
-              type="button"
-              class="segmented__btn"
-              data-value="daylight"
-              aria-pressed="false"
-            >
-              Daylight
-            </button>
+          <div class="segmented" id="dailyScoreMode" aria-label="Daily score hours">
+            <button class="segbtn" data-mode="all" type="button">All hours</button>
+            <button class="segbtn" data-mode="daylight" type="button">Daylight</button>
           </div>
         </div>
 
-        <hr class="divider" />
+        <div class="spacer"></div>
 
-        <!-- NEW: Scoring profile -->
-        <div class="setting">
-          <div class="setting__label">
-            <div class="setting__name">Scoring style</div>
-            <div class="setting__hint">Adjust how cautious the boating score is</div>
+        <div class="muted small">
+          Daylight uses local sunrise/sunset and rounds to full hours.
+        </div>
+
+        <div class="spacer"></div>
+
+        <!-- subtle divider -->
+        <div style="height:1px; background: rgba(255,255,255,0.10);"></div>
+
+        <div class="spacer"></div>
+
+        <!-- Scoring style -->
+        <div class="row" style="align-items:flex-start;">
+          <div class="muted small" style="flex:1;">
+            Scoring style
+            <div class="muted small" style="margin-top:4px; opacity:0.9;">
+              Adjust how cautious the boating score is.
+            </div>
           </div>
 
-          <div id="scoreProfile" class="segmented" role="group" aria-label="Scoring style">
-            <button type="button" class="segmented__btn" data-value="safety" aria-pressed="false">
-              Safety
-            </button>
-            <button
-              type="button"
-              class="segmented__btn"
-              data-value="standard"
-              aria-pressed="false"
-            >
-              Standard
-            </button>
-            <button
-              type="button"
-              class="segmented__btn"
-              data-value="opportunity"
-              aria-pressed="false"
-            >
-              Opportunity
-            </button>
+          <div class="segmented" id="scoreProfile" aria-label="Scoring style">
+            <button class="segbtn" data-profile="safety" type="button">Safety</button>
+            <button class="segbtn" data-profile="standard" type="button">Standard</button>
+            <button class="segbtn" data-profile="opportunity" type="button">Opportunity</button>
           </div>
         </div>
 
-        <!-- NEW: Include temperature -->
-        <div class="setting">
-          <div class="setting__label">
-            <div class="setting__name">Include temperature</div>
-            <div class="setting__hint">Optionally factor cold air/sea into the score</div>
+        <div class="spacer"></div>
+
+        <!-- Include temperature -->
+        <div class="row" style="align-items:flex-start;">
+          <div class="muted small" style="flex:1;">
+            Include temperature
+            <div class="muted small" style="margin-top:4px; opacity:0.9;">
+              Optionally factor cold air/sea into the score.
+            </div>
           </div>
 
-          <div
-            id="scoreIncludeTemp"
-            class="segmented"
-            role="group"
-            aria-label="Include temperature"
-          >
-            <button type="button" class="segmented__btn" data-value="off" aria-pressed="false">
-              Off
-            </button>
-            <button type="button" class="segmented__btn" data-value="on" aria-pressed="false">
-              On
-            </button>
+          <div class="segmented" id="scoreTemp" aria-label="Include temperature">
+            <button class="segbtn" data-temp="off" type="button">Off</button>
+            <button class="segbtn" data-temp="on" type="button">On</button>
           </div>
         </div>
-      </section>
-    </main>
+      </div>
 
-    <script type="module" src="./settings.js"></script>
+      <div class="spacer"></div>
+
+      <!-- About card -->
+      <div class="card">
+        <div style="font-weight:800; margin-bottom:6px;">About</div>
+        <div class="muted small">
+          Learn what Skippy does and how the ratings work.
+        </div>
+
+        <div class="spacer"></div>
+
+        <button id="aboutBtn" class="btn" type="button">About Skippy</button>
+      </div>
+
+      <div class="footer muted small" id="footerNote"></div>
+    </div>
+
+    <script src="./settings.js"></script>
   </body>
 </html>
