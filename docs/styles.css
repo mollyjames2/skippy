@@ -35,7 +35,6 @@ a {
   border-radius: 18px;
   padding: 14px;
 
-  /* soft depth + subtle inner highlight */
   box-shadow:
     0 12px 30px rgba(0, 0, 0, 0.38),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
@@ -46,7 +45,6 @@ a {
   transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease;
 }
 
-/* Soft rim highlight (premium “surface” feel) */
 .card::before {
   content: "";
   position: absolute;
@@ -70,7 +68,6 @@ a {
     inset 0 1px 0 rgba(255, 255, 255, 0.07);
 }
 
-/* Stronger treatment for the hero “Today” card */
 #tideCard.card {
   border-color: rgba(255, 255, 255, 0.14);
   box-shadow:
@@ -89,7 +86,6 @@ a {
   justify-content: space-between;
 }
 
-/* Small rhythm improvements */
 .spacer {
   height: 12px;
 }
@@ -98,7 +94,6 @@ a {
   font-size: 12px;
 }
 
-/* Improve hierarchy subtly */
 .muted {
   color: rgba(232, 238, 247, 0.72);
 }
@@ -116,13 +111,8 @@ h1, h2, h3 {
   margin: 0;
 }
 
-h1 {
-  font-size: 20px;
-}
-
-h2 {
-  font-size: 16px;
-}
+h1 { font-size: 20px; }
+h2 { font-size: 16px; }
 
 /* -----------------------------
    Lists + tiles
@@ -165,8 +155,6 @@ h2 {
   font-weight: 700;
   font-size: 12px;
 }
-
-/* Score-based pill colours (aligned with rating system) */
 
 .pill.excellent {
   background: rgba(0, 200, 120, 0.20);
@@ -261,14 +249,8 @@ h2 {
 }
 
 @keyframes splashFadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(6px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
 }
 
 .splash-hide {
@@ -289,14 +271,10 @@ h2 {
 }
 
 @media (min-width: 480px) {
-  .logo-horz {
-    height: 36px;
-  }
+  .logo-horz { height: 36px; }
 }
 
-.topbar-spacer {
-  height: 56px;
-}
+.topbar-spacer { height: 56px; }
 
 .topbar {
   max-width: 420px;
@@ -343,9 +321,7 @@ h2 {
   transition: transform 140ms ease, box-shadow 140ms ease, border-color 140ms ease;
 }
 
-.location-bar:active {
-  transform: scale(0.992);
-}
+.location-bar:active { transform: scale(0.992); }
 
 .location-left {
   display: flex;
@@ -375,10 +351,7 @@ h2 {
    Settings segmented controls
 ----------------------------- */
 
-.segmented {
-  display: flex;
-  gap: 8px;
-}
+.segmented { display: flex; gap: 8px; }
 
 .segbtn {
   background: rgba(255, 255, 255, 0.06);
@@ -437,21 +410,14 @@ h2 {
 }
 
 .hourly-wind .sub,
-.hourly-waves .sub {
-  margin-top: 2px;
-}
+.hourly-waves .sub { margin-top: 2px; }
 
-.hourly-score .pill {
-  display: inline-block;
-}
+.hourly-score .pill { display: inline-block; }
 
-.hourly-extras {
-  margin-top: 6px;
-}
+.hourly-extras { margin-top: 6px; }
 
 /* -----------------------------
-   Score-toned cards (Today + Best Day)
-   Keep your tints but enhance depth + subtle glow
+   Score-toned cards
 ----------------------------- */
 
 .card.tone-excellent {
@@ -499,17 +465,11 @@ h2 {
     inset 0 1px 0 rgba(255, 255, 255, 0.10);
 }
 
-/* Bigger score number for Today + Best Day cards (not a pill) */
-.hero-score {
-  font-weight: 900;
-  font-size: 22px;
-  line-height: 1;
-  padding-left: 12px;
-}
+/* -----------------------------
+   Today + Best card UI
+----------------------------- */
 
-/* Today card styles (single, final set) */
-
-/* Title: larger, mixed case, not bold */
+/* Title: big, mixed case, not bold */
 .today-title{
   font-size: 28px;
   font-weight: 500;
@@ -517,27 +477,33 @@ h2 {
   color: rgba(232,238,247,0.95);
   text-shadow: 0 1px 0 rgba(0,0,0,0.25);
   margin-bottom: 6px;
+
+  /* prevent title from running under the badge */
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 
-/* Grid layout (right column vertically centered) */
+/* IMPORTANT: prevent grid overlap on mobile by allowing left column to shrink */
 .today-grid{
   display: grid;
-  grid-template-columns: 1fr 120px;
+  grid-template-columns: minmax(0, 1fr) 120px; /* <- key */
   gap: 14px;
   align-items: stretch;
 }
 
-.today-left{ min-width: 0; }
+.today-left{
+  min-width: 0; /* <- key */
+}
+
 .today-spacer-tight{ height: 8px; }
 
 .today-headline{
   font-size: 16px;
-  font-weight: 500;     /* normal weight */
+  font-weight: 500;
   letter-spacing: -0.01em;
   line-height: 1.18;
   color: rgba(232,238,247,0.98);
 }
-
 
 .today-headline-strong{
   font-weight: 800;
@@ -546,12 +512,11 @@ h2 {
 
 .today-section-title{
   font-size: 12px;
-  font-weight: 500;          /* not bold */
-  text-transform: none;      /* keep "Next tides" case */
-  letter-spacing: 0.01em;    /* normal reading */
+  font-weight: 500;
+  text-transform: none;
+  letter-spacing: 0.01em;
   color: rgba(232,238,247,0.70);
 }
-
 
 .today-footer{
   font-size: 11px;
@@ -595,7 +560,7 @@ h2 {
 
   color: rgba(232, 238, 247, 0.70);
   font-size: 11px;
-  font-weight: 700;      /* less bold */
+  font-weight: 700;
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
@@ -614,12 +579,12 @@ h2 {
   text-align: center;
   line-height: 1.1;
 
-  min-height: 18px; /* keeps row calm when temp has feels */
+  min-height: 18px;
 }
 
 .today-chip-main{
   font-size: 12px;
-  font-weight: 800; /* reduced from 900 */
+  font-weight: 800;
   color: rgba(232, 238, 247, 0.96);
 }
 
@@ -629,7 +594,6 @@ h2 {
   color: rgba(232, 238, 247, 0.78);
 }
 
-/* Temp chip: “feels …” slightly quieter so it doesn’t overpower the row */
 .today-chip-feels{
   font-size: 11px;
   font-weight: 700;
@@ -664,20 +628,27 @@ h2 {
   opacity: 0.95;
 }
 
-/* Right column: vertically centered */
+/* Right column */
 .today-score-wrap{
   display: flex;
-  align-items: center;     /* vertical center inside tile */
+  align-items: center;
   justify-content: flex-end;
 }
 
 .today-score-stack{
   width: 120px;
+  max-width: 120px;
   text-align: center;
+
+  /* IMPORTANT: no global vertical shift (it caused Best card overlap) */
+  transform: none;
+}
+
+/* If you want the badge lifted ONLY on the Today card, scope it here */
+#tideCard .today-score-stack{
   transform: translateY(-40px);
 }
 
-/* Text above the circle (not bold) */
 .today-score-label{
   font-size: 10px;
   font-weight: 600;
@@ -747,49 +718,32 @@ h2 {
 
 .today-score-num{
   font-size: 34px;
-  font-weight: 800; /* reduced */
+  font-weight: 800;
   line-height: 1;
   color: rgba(232,238,247,1);
   transform: translateY(1px);
 }
 
-/* Circle tone backgrounds (more opaque) */
-.today-score-circle.tone-excellent{
-  background: rgba(0,200,120,0.70);
-  border-color: rgba(0,200,120,0.44);
-}
-.today-score-circle.tone-good{
-  background: rgba(80,140,255,0.70);
-  border-color: rgba(80,140,255,0.44);
-}
-.today-score-circle.tone-ok{
-  background: rgba(255,170,0,0.70);
-  border-color: rgba(255,170,0,0.44);
-}
-.today-score-circle.tone-poor{
-  background: rgba(255,80,80,0.70);
-  border-color: rgba(255,80,80,0.44);
-}
-.today-score-circle.tone-avoid{
-  background: rgba(140,140,140,0.72);
-  border-color: rgba(140,140,140,0.44);
-}
-
+/* Circle tone backgrounds */
+.today-score-circle.tone-excellent{ background: rgba(0,200,120,0.70); border-color: rgba(0,200,120,0.44); }
+.today-score-circle.tone-good{      background: rgba(80,140,255,0.70); border-color: rgba(80,140,255,0.44); }
+.today-score-circle.tone-ok{        background: rgba(255,170,0,0.70); border-color: rgba(255,170,0,0.44); }
+.today-score-circle.tone-poor{      background: rgba(255,80,80,0.70); border-color: rgba(255,80,80,0.44); }
+.today-score-circle.tone-avoid{     background: rgba(140,140,140,0.72); border-color: rgba(140,140,140,0.44); }
 
 /* -----------------------------
-   Best day this week card (recommendation)
-   Reuses: .today-title + today badge styles
+   Best day this week card
 ----------------------------- */
 
 .best-grid{
   display: grid;
-  grid-template-columns: 1fr 120px;
+  grid-template-columns: minmax(0, 1fr) 120px; /* <- key */
   gap: 14px;
   align-items: stretch;
 }
 
 .best-left{
-  min-width: 0;
+  min-width: 0; /* <- key */
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -797,10 +751,12 @@ h2 {
 
 .best-dayline{
   font-size: 18px;
-  font-weight: 600;      /* confident but not shouty */
+  font-weight: 600;
   letter-spacing: -0.01em;
   color: rgba(232,238,247,0.98);
   line-height: 1.2;
+
+  overflow-wrap: anywhere;
 }
 
 .best-subtle{
@@ -810,137 +766,6 @@ h2 {
   color: rgba(232,238,247,0.66);
 }
 
-/* Message-only state (all poor/avoid or all avoid) */
-.best-week-message{
-  font-size: 20px;
-  font-style: italic;
-  font-weight: 500;
-  color: rgba(232,238,247,0.95);
-  line-height: 1.25;
-  padding: 8px 2px;
-}
-
-/* -----------------------------
-   Best day this week card (recommendation)
-   Reuses: .today-title + today badge styles
------------------------------ */
-
-.best-grid{
-  display: grid;
-  grid-template-columns: 1fr 120px;
-  gap: 14px;
-  align-items: stretch;
-}
-
-.best-left{
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.best-dayline{
-  font-size: 18px;
-  font-weight: 600;      /* confident but not shouty */
-  letter-spacing: -0.01em;
-  color: rgba(232,238,247,0.98);
-  line-height: 1.2;
-}
-
-.best-subtle{
-  margin-top: 4px;
-  font-size: 12px;
-  font-weight: 500;
-  color: rgba(232,238,247,0.66);
-}
-
-/* Message-only state (all poor/avoid or all avoid) */
-.best-week-message{
-  font-size: 20px;
-  font-style: italic;
-  font-weight: 500;
-  color: rgba(232,238,247,0.95);
-  line-height: 1.25;
-  padding: 8px 2px;
-}
-/* -----------------------------
-   Best day this week card (recommendation)
-   Reuses: .today-title + today badge styles
------------------------------ */
-
-.best-grid{
-  display: grid;
-  grid-template-columns: 1fr 120px;
-  gap: 14px;
-  align-items: stretch;
-}
-
-.best-left{
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.best-dayline{
-  font-size: 18px;
-  font-weight: 600;      /* confident but not shouty */
-  letter-spacing: -0.01em;
-  color: rgba(232,238,247,0.98);
-  line-height: 1.2;
-}
-
-.best-subtle{
-  margin-top: 4px;
-  font-size: 12px;
-  font-weight: 500;
-  color: rgba(232,238,247,0.66);
-}
-
-/* Message-only state (all poor/avoid or all avoid) */
-.best-week-message{
-  font-size: 20px;
-  font-style: italic;
-  font-weight: 500;
-  color: rgba(232,238,247,0.95);
-  line-height: 1.25;
-  padding: 8px 2px;
-}
-/* -----------------------------
-   Best day this week card (recommendation)
-   Reuses: .today-title + today badge styles
------------------------------ */
-
-.best-grid{
-  display: grid;
-  grid-template-columns: 1fr 120px;
-  gap: 14px;
-  align-items: stretch;
-}
-
-.best-left{
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
-
-.best-dayline{
-  font-size: 18px;
-  font-weight: 600;      /* confident but not shouty */
-  letter-spacing: -0.01em;
-  color: rgba(232,238,247,0.98);
-  line-height: 1.2;
-}
-
-.best-subtle{
-  margin-top: 4px;
-  font-size: 12px;
-  font-weight: 500;
-  color: rgba(232,238,247,0.66);
-}
-
-/* Message-only state (all poor/avoid or all avoid) */
 .best-week-message{
   font-size: 20px;
   font-style: italic;
@@ -951,3 +776,33 @@ h2 {
   text-align: center;
 }
 
+/* -----------------------------
+   Mobile guardrails (prevents overlap on very small screens)
+----------------------------- */
+
+@media (max-width: 360px){
+  .today-grid,
+  .best-grid{
+    grid-template-columns: minmax(0, 1fr) 104px;
+    gap: 12px;
+  }
+
+  .today-score-stack{
+    width: 104px;
+    max-width: 104px;
+  }
+
+  .today-score-circle{
+    width: 74px;
+    height: 74px;
+  }
+
+  .today-score-num{
+    font-size: 30px;
+  }
+
+  /* keep the Today badge lift, but a bit smaller on tiny screens */
+  #tideCard .today-score-stack{
+    transform: translateY(-28px);
+  }
+}
