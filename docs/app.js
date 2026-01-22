@@ -153,7 +153,8 @@ function renderTodayTidesCard(dayData) {
 
   // Title line (optionally show station name)
   var stationName = meta && meta.station && meta.station.name ? meta.station.name : "";
-  var title = "Today at a glance" + (stationName ? " (" + stationName + ")" : "");
+  var title = "Today at a glance"
+  //var title = "Today at a glance" + (stationName ? " (" + stationName + ")" : "");
   var todayScore = dayData && dayData.summary ? dayData.summary.score : null;
 
   // Next tide:
