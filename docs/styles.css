@@ -506,3 +506,34 @@ h2 {
   line-height: 1;
   padding-left: 12px;
 }
+
+/* Today card: grid layout + hero typography */
+.today-grid{
+  display: grid;
+  grid-template-columns: 1fr 92px;
+  gap: 14px;
+  align-items: start;
+}
+
+.today-hero{
+  text-align: right;
+  padding-left: 8px;
+}
+
+.today-hero-word{
+  font-weight: 900;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  opacity: 0.95;
+  line-height: 1.1;
+}
+
+.today-hero-score{
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 0.95;
+  margin-top: 2px;
+}
+
+.today-left{ min-width: 0; }
+

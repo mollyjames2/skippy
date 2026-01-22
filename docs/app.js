@@ -429,12 +429,10 @@ function renderTodayTidesCard(dayData) {
   var tempC = current && current.temp_c != null ? current.temp_c : null;
   var feelsC = current && current.feels_like_c != null ? current.feels_like_c : null;
 
-
   var arrowDeg = windArrowDegFromCompass(windDir);
 
   var nextLine = "";
   if (next1) {
-    // e.g. "Next high tide in 4h 12m"
     nextLine =
       '<div class="small muted">Next ' +
       String(next1.type || "-").toLowerCase() +
@@ -442,6 +440,7 @@ function renderTodayTidesCard(dayData) {
       formatMins(next1.mins) +
       "</b></div>";
   }
+
   var tempLine = "";
   if (tempC != null || feelsC != null) {
     tempLine =
@@ -454,15 +453,17 @@ function renderTodayTidesCard(dayData) {
       "</div>";
   }
 
-  // Layout: left content + right hero
   setHtml(
     "tideCard",
     "" +
       '<div class="muted small">TODAY ON THE WATER</div>' +
       '<div class="spacer"></div>' +
-      '<div class="row" style="align-items:flex-start;">' +
-      '  <div style="flex:1;">' +
 
+      /*  grid wrapper instead of flex row */
+      '<div class="today-grid">' +
+      '  <div class="today-left">' +
+
+      /*'  <div style="flex:1;">' + */
       '    <div style="font-weight:700;">Next tides</div>' +
       (next1 ? renderTideLine(next1) : '<div class="small muted">-</div>') +
       (next2 ? renderTideLine(next2) : "") +
@@ -475,26 +476,21 @@ function renderTodayTidesCard(dayData) {
 
       '    <div class="spacer"></div>' +
       '    <div style="font-weight:700;">Current Conditions</div>' +
-      
-      
-      
-      
-      
-        '    <div class="small muted" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">' +
+
+      '    <div class="small muted" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">' +
       svgWind() +
       '<span>' + windKts + " kts</span>" +
       svgArrowRotated(arrowDeg) +
       '<span>' + windDir + "</span>" +
       "</div>" +
-      
+
       tempLine +
-      
+
       '    <div class="small muted" style="display:flex; align-items:center; gap:6px;">' +
       svgWave() +
       "<span>" + waveM + " m</span>" +
       "</div>" +
 
-      
       '    <div class="small muted" style="display:flex; align-items:center; gap:6px;">' +
       svgWeatherFromText(conditionText) +
       "<span>" + String(conditionText).toLowerCase() + "</span>" +
@@ -502,18 +498,17 @@ function renderTodayTidesCard(dayData) {
 
       "  </div>" +
 
-      '  <div style="text-align:right; padding-left:12px;">' +
-      '    <div style="font-weight:800; letter-spacing:0.06em;">' + ratingWord + "</div>" +
-      '    <div style="font-size:28px; font-weight:800; line-height:1.05;">' +
-      (score == null ? "-" : score) +
-      "</div>" +
+      /*  hero with proper classes */
+      '  <div class="today-hero">' +
+      '    <div class="today-hero-word">' + ratingWord + "</div>" +
+      '    <div class="today-hero-score">' + (score == null ? "-" : score) + "</div>" +
       "  </div>" +
+
       "</div>"
   );
 
   applyCardTone(document.getElementById("tideCard"), score);
 
-  // Make the whole "Today" card open the Day view for today.
   var tideEl = document.getElementById("tideCard");
   if (tideEl && !tideEl.dataset.daylinkWired) {
     tideEl.dataset.daylinkWired = "1";
@@ -528,6 +523,7 @@ function renderTodayTidesCard(dayData) {
     });
   }
 }
+
 
 /* ---------------------------------------------
    Existing UI code
