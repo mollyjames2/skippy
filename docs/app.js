@@ -463,13 +463,14 @@ function renderTodayTidesCard(dayData) {
   // Condition chip text
   var condValue = conditionText ? String(conditionText).toLowerCase() : "-";
 
-  // Badge tone class from your existing helper (used by applyCardTone too)
+  // Badge tone class from your existing helper
   var toneClass = toneClassForScore(score); // e.g. "tone-ok"
 
   setHtml(
     "tideCard",
     "" +
-      '<div class="muted small">TODAY ON THE WATER</div>' +
+      // Title: bigger, mixed case, not bold
+      '<div class="today-title">Today on the water</div>' +
       '<div class="spacer"></div>' +
 
       '<div class="today-grid">' +
@@ -491,7 +492,7 @@ function renderTodayTidesCard(dayData) {
 
       '<div class="spacer"></div>' +
 
-      // 3) 2x2 chips
+      // 3) 2x2 chips (centered content)
       '    <div class="today-chips">' +
 
       // Wind chip
@@ -530,12 +531,14 @@ function renderTodayTidesCard(dayData) {
 
       "  </div>" +
 
-      // Right: score badge (tone-coloured, opaque-looking)
+      // Right: vertically centered stack + 3D number circle
       '  <div class="today-score-wrap">' +
-      '    <div class="today-score-badge ' + toneClass + '">' +
+      '    <div class="today-score-stack">' +
       '      <div class="today-score-label">Boating score</div>' +
       '      <div class="today-score-word">' + ratingWord + "</div>" +
-      '      <div class="today-score-num">' + (score == null ? "-" : score) + "</div>" +
+      '      <div class="today-score-circle ' + toneClass + '">' +
+      '        <div class="today-score-num">' + (score == null ? "-" : score) + "</div>" +
+      "      </div>" +
       "    </div>" +
       "  </div>" +
 
@@ -560,6 +563,7 @@ function renderTodayTidesCard(dayData) {
     });
   }
 }
+
 
 
 /* ---------------------------------------------

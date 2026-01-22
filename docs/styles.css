@@ -507,43 +507,24 @@ h2 {
   padding-left: 12px;
 }
 
-/* Today card: grid layout + hero typography */
-.today-grid{
-  display: grid;
-  grid-template-columns: 1fr 92px;
-  gap: 14px;
-  align-items: start;
+/* Today card styles (single, final set) */
+
+/* Title: larger, mixed case, not bold */
+.today-title{
+  font-size: 15px;
+  font-weight: 500;
+  letter-spacing: 0.015em;
+  color: rgba(232,238,247,0.95);
+  text-shadow: 0 1px 0 rgba(0,0,0,0.25);
+  margin-bottom: 2px;
 }
 
-.today-hero{
-  text-align: right;
-  padding-left: 8px;
-}
-
-.today-hero-word{
-  font-weight: 900;
-  letter-spacing: 0.10em;
-  text-transform: uppercase;
-  opacity: 0.95;
-  line-height: 1.1;
-}
-
-.today-hero-score{
-  font-size: 34px;
-  font-weight: 900;
-  line-height: 0.95;
-  margin-top: 2px;
-}
-
-.today-left{ min-width: 0; }
-
-/* Today card: headline + 2x2 chips + score badge */
-
+/* Grid layout (right column vertically centered) */
 .today-grid{
   display: grid;
   grid-template-columns: 1fr 120px;
   gap: 14px;
-  align-items: start;
+  align-items: stretch;
 }
 
 .today-left{ min-width: 0; }
@@ -551,19 +532,19 @@ h2 {
 
 .today-headline{
   font-size: 16px;
-  font-weight: 900;
+  font-weight: 800; /* reduced from 900 */
   letter-spacing: -0.01em;
   line-height: 1.18;
   color: rgba(232, 238, 247, 0.98);
 }
 
 .today-headline-strong{
-  font-weight: 900;
+  font-weight: 800;
   color: rgba(232, 238, 247, 1);
 }
 
 .today-section-title{
-  font-weight: 800;
+  font-weight: 700; /* less bold */
   font-size: 12px;
   letter-spacing: 0.08em;
   text-transform: uppercase;
@@ -580,26 +561,40 @@ h2 {
 .today-chips{
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 10px;
+  gap: 12px;
 }
 
+/* Rounder, slightly more opaque chips + centered content */
 .today-chip{
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.075);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 18px;
   padding: 10px 10px;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+
+  box-shadow:
+    0 8px 18px rgba(0,0,0,0.18),
+    inset 0 1px 0 rgba(255,255,255,0.08);
+
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+
+  transition: background 120ms ease, box-shadow 120ms ease, border-color 120ms ease;
 }
 
 .today-chip-top{
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
+  text-align: center;
+
   color: rgba(232, 238, 247, 0.70);
   font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.06em;
+  font-weight: 700;      /* less bold */
+  letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 
@@ -612,26 +607,30 @@ h2 {
 .today-chip-value{
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
+  text-align: center;
   line-height: 1.1;
+
+  min-height: 18px; /* keeps row calm when temp has feels */
 }
 
 .today-chip-main{
   font-size: 12px;
-  font-weight: 900;
+  font-weight: 800; /* reduced from 900 */
   color: rgba(232, 238, 247, 0.96);
 }
 
 .today-chip-sub{
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
   color: rgba(232, 238, 247, 0.78);
 }
 
 /* Temp chip: “feels …” slightly quieter so it doesn’t overpower the row */
 .today-chip-feels{
   font-size: 11px;
-  font-weight: 800;
+  font-weight: 700;
   color: rgba(232, 238, 247, 0.72);
   white-space: nowrap;
 }
@@ -646,12 +645,15 @@ h2 {
 .today-chip-cond{
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 8px;
+
   font-size: 12px;
-  font-weight: 900;
+  font-weight: 800;
   color: rgba(232, 238, 247, 0.96);
   text-transform: lowercase;
   line-height: 1.1;
+  text-align: center;
 }
 
 .today-chip-cond svg{
@@ -660,95 +662,112 @@ h2 {
   opacity: 0.95;
 }
 
-/* Score badge (tone-coloured, “opaque-looking”) */
+/* Right column: vertically centered */
 .today-score-wrap{
   display: flex;
+  align-items: center;     /* vertical center inside tile */
   justify-content: flex-end;
 }
 
-.today-score-badge{
+.today-score-stack{
   width: 120px;
-  border-radius: 18px;
-  padding: 10px 10px 12px 10px;
-  text-align: right;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  box-shadow:
-    0 10px 24px rgba(0, 0, 0, 0.30),
-    inset 0 1px 0 rgba(255, 255, 255, 0.10);
+  text-align: center;
 }
 
-/* Uses the SAME tone class names as your card.
-   Alpha is higher here to read “opaque” against the glassy card. */
-.today-score-badge.tone-excellent{
-  background: rgba(0, 200, 120, 0.52);
-  border-color: rgba(0, 200, 120, 0.42);
-  box-shadow:
-    0 10px 24px rgba(0,0,0,0.30),
-    0 0 26px rgba(0,200,120,0.14),
-    inset 0 1px 0 rgba(255,255,255,0.12);
-}
-.today-score-badge.tone-good{
-  background: rgba(80, 140, 255, 0.52);
-  border-color: rgba(80, 140, 255, 0.42);
-  box-shadow:
-    0 10px 24px rgba(0,0,0,0.30),
-    0 0 26px rgba(80,140,255,0.14),
-    inset 0 1px 0 rgba(255,255,255,0.12);
-}
-.today-score-badge.tone-ok{
-  background: rgba(255, 170, 0, 0.50);
-  border-color: rgba(255, 170, 0, 0.40);
-  box-shadow:
-    0 10px 24px rgba(0,0,0,0.30),
-    0 0 22px rgba(255,170,0,0.12),
-    inset 0 1px 0 rgba(255,255,255,0.12);
-}
-.today-score-badge.tone-poor{
-  background: rgba(255, 80, 80, 0.50);
-  border-color: rgba(255, 80, 80, 0.40);
-  box-shadow:
-    0 10px 24px rgba(0,0,0,0.30),
-    0 0 22px rgba(255,80,80,0.12),
-    inset 0 1px 0 rgba(255,255,255,0.12);
-}
-.today-score-badge.tone-avoid{
-  background: rgba(140, 140, 140, 0.56);
-  border-color: rgba(140, 140, 140, 0.40);
-  box-shadow:
-    0 10px 24px rgba(0,0,0,0.30),
-    0 0 18px rgba(140,140,140,0.10),
-    inset 0 1px 0 rgba(255,255,255,0.12);
-}
-
+/* Text above the circle (not bold) */
 .today-score-label{
   font-size: 10px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
+  font-weight: 600;
+  letter-spacing: 0.10em;
   text-transform: uppercase;
-  color: rgba(232, 238, 247, 0.74);
+  color: rgba(232,238,247,0.70);
 }
 
 .today-score-word{
   margin-top: 6px;
   font-size: 14px;
-  font-weight: 900;
+  font-weight: 700;
   letter-spacing: 0.10em;
   text-transform: uppercase;
-  color: rgba(232, 238, 247, 0.95);
+  color: rgba(232,238,247,0.94);
   line-height: 1.1;
 }
 
-.today-score-num{
-  margin-top: 2px;
-  font-size: 34px;
-  font-weight: 900;
-  line-height: 0.95;
-  color: rgba(232, 238, 247, 1);
-}
+/* 3D number circle */
+.today-score-circle{
+  width: 84px;
+  height: 84px;
+  margin: 10px auto 0 auto;
+  border-radius: 999px;
 
-.today-chip-value{
-  min-height: 18px;
+  display: flex;
   align-items: center;
+  justify-content: center;
+
+  border: 1px solid rgba(255,255,255,0.18);
+  box-shadow:
+    0 14px 28px rgba(0,0,0,0.42),
+    inset 0 2px 0 rgba(255,255,255,0.18),
+    inset 0 -10px 18px rgba(0,0,0,0.22);
+
+  position: relative;
 }
 
+.today-score-circle::before{
+  content:"";
+  position:absolute;
+  inset: 0;
+  border-radius: inherit;
+  background: radial-gradient(
+    70% 60% at 30% 25%,
+    rgba(255,255,255,0.22),
+    rgba(255,255,255,0) 60%
+  );
+  pointer-events:none;
+  opacity: 0.95;
+}
 
+.today-score-circle::after{
+  content:"";
+  position:absolute;
+  inset: -2px;
+  border-radius: inherit;
+  pointer-events:none;
+  opacity: 0.55;
+  filter: blur(6px);
+  background: radial-gradient(
+    60% 60% at 50% 40%,
+    rgba(255,255,255,0.12),
+    rgba(255,255,255,0) 70%
+  );
+}
+
+.today-score-num{
+  font-size: 34px;
+  font-weight: 800; /* reduced */
+  line-height: 1;
+  color: rgba(232,238,247,1);
+  transform: translateY(1px);
+}
+
+/* Circle tone backgrounds (more opaque) */
+.today-score-circle.tone-excellent{
+  background: rgba(0,200,120,0.70);
+  border-color: rgba(0,200,120,0.44);
+}
+.today-score-circle.tone-good{
+  background: rgba(80,140,255,0.70);
+  border-color: rgba(80,140,255,0.44);
+}
+.today-score-circle.tone-ok{
+  background: rgba(255,170,0,0.70);
+  border-color: rgba(255,170,0,0.44);
+}
+.today-score-circle.tone-poor{
+  background: rgba(255,80,80,0.70);
+  border-color: rgba(255,80,80,0.44);
+}
+.today-score-circle.tone-avoid{
+  background: rgba(140,140,140,0.72);
+  border-color: rgba(140,140,140,0.44);
+}
