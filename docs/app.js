@@ -431,27 +431,40 @@ function renderTodayTidesCard(dayData) {
 
   var arrowDeg = windArrowDegFromCompass(windDir);
 
-  var nextLine = "";
+  // Headline: "Next high tide in 2h 26m"
+  var headline = "";
   if (next1) {
-    nextLine =
-      '<div class="small muted">Next ' +
-      String(next1.type || "-").toLowerCase() +
-      " tide in <b>" +
-      formatMins(next1.mins) +
-      "</b></div>";
-  }
-
-  var tempLine = "";
-  if (tempC != null || feelsC != null) {
-    tempLine =
-      '<div class="small muted" style="display:flex; align-items:center; gap:6px;">' +
-        svgThermometer() +
-        "<span>" +
-          (tempC != null ? tempC + "&deg;C" : "-") +
-          (feelsC != null ? ' <span style="opacity:0.9;">(feels ' + feelsC + "&deg;C)</span>" : "") +
-        "</span>" +
+    headline =
+      '<div class="today-headline">' +
+        'Next ' + String(next1.type || "-").toLowerCase() + ' tide in ' +
+        '<span class="today-headline-strong">' + formatMins(next1.mins) + "</span>" +
+      "</div>";
+  } else {
+    headline =
+      '<div class="today-headline">' +
+        'Next tide in <span class="today-headline-strong">-</span>' +
       "</div>";
   }
+
+  // Temp chip: if "feels" is present, reduce the feels part slightly
+  var tempValueHtml = "";
+  if (tempC != null || feelsC != null) {
+    tempValueHtml =
+      '<span class="today-chip-main">' +
+        (tempC != null ? tempC + "&deg;C" : "-") +
+      "</span>" +
+      (feelsC != null
+        ? ' <span class="today-chip-feels">feels ' + feelsC + "&deg;C</span>"
+        : "");
+  } else {
+    tempValueHtml = '<span class="today-chip-main">-</span>';
+  }
+
+  // Condition chip text
+  var condValue = conditionText ? String(conditionText).toLowerCase() : "-";
+
+  // Badge tone class from your existing helper (used by applyCardTone too)
+  var toneClass = toneClassForScore(score); // e.g. "tone-ok"
 
   setHtml(
     "tideCard",
@@ -459,56 +472,80 @@ function renderTodayTidesCard(dayData) {
       '<div class="muted small">TODAY ON THE WATER</div>' +
       '<div class="spacer"></div>' +
 
-      /*  grid wrapper instead of flex row */
       '<div class="today-grid">' +
+
       '  <div class="today-left">' +
 
-      /*'  <div style="flex:1;">' + */
-      '    <div style="font-weight:700;">Next tides</div>' +
+      // 1) Headline (biggest left-side element)
+      headline +
+
+      '<div class="spacer today-spacer-tight"></div>' +
+
+      // 2) Next tides block
+      '    <div class="today-section-title">Next tides</div>' +
       (next1 ? renderTideLine(next1) : '<div class="small muted">-</div>') +
       (next2 ? renderTideLine(next2) : "") +
 
-      '    <div class="spacer"></div>' +
-      (nextLine || "") +
+      '<div class="spacer today-spacer-tight"></div>' +
+      '    <div class="today-footer">' + footer + "</div>" +
 
-      '    <div class="spacer"></div>' +
-      '    <div class="small muted" style="opacity:0.9;">' + footer + "</div>" +
+      '<div class="spacer"></div>' +
 
-      '    <div class="spacer"></div>' +
-      '    <div style="font-weight:700;">Current Conditions</div>' +
+      // 3) 2x2 chips
+      '    <div class="today-chips">' +
 
-      '    <div class="small muted" style="display:flex; align-items:center; gap:6px; flex-wrap:wrap;">' +
-      svgWind() +
-      '<span>' + windKts + " kts</span>" +
-      svgArrowRotated(arrowDeg) +
-      '<span>' + windDir + "</span>" +
-      "</div>" +
+      // Wind chip
+      '      <div class="today-chip">' +
+      '        <div class="today-chip-top">' + svgWind() + '<span class="today-chip-label">Wind</span></div>' +
+      '        <div class="today-chip-value">' +
+      '          <span class="today-chip-main">' + windKts + 'kt</span>' +
+      '          <span class="today-chip-sub">' + windDir + "</span>" +
+                 svgArrowRotated(arrowDeg) +
+      "        </div>" +
+      "      </div>" +
 
-      tempLine +
+      // Waves chip
+      '      <div class="today-chip">' +
+      '        <div class="today-chip-top">' + svgWave() + '<span class="today-chip-label">Waves</span></div>' +
+      '        <div class="today-chip-value">' +
+      '          <span class="today-chip-main">' + waveM + "m</span>" +
+      "        </div>" +
+      "      </div>" +
 
-      '    <div class="small muted" style="display:flex; align-items:center; gap:6px;">' +
-      svgWave() +
-      "<span>" + waveM + " m</span>" +
-      "</div>" +
+      // Temp chip
+      '      <div class="today-chip">' +
+      '        <div class="today-chip-top">' + svgThermometer() + '<span class="today-chip-label">Temp</span></div>' +
+      '        <div class="today-chip-value">' + tempValueHtml + "</div>" +
+      "      </div>" +
 
-      '    <div class="small muted" style="display:flex; align-items:center; gap:6px;">' +
-      svgWeatherFromText(conditionText) +
-      "<span>" + String(conditionText).toLowerCase() + "</span>" +
-      "</div>" +
+      // Condition chip (icon + words)
+      '      <div class="today-chip today-chip--cond">' +
+      '        <div class="today-chip-cond">' +
+                 svgWeatherFromText(conditionText) +
+      '          <span>' + condValue + "</span>" +
+      "        </div>" +
+      "      </div>" +
+
+      "    </div>" +
 
       "  </div>" +
 
-      /*  hero with proper classes */
-      '  <div class="today-hero">' +
-      '    <div class="today-hero-word">' + ratingWord + "</div>" +
-      '    <div class="today-hero-score">' + (score == null ? "-" : score) + "</div>" +
+      // Right: score badge (tone-coloured, opaque-looking)
+      '  <div class="today-score-wrap">' +
+      '    <div class="today-score-badge ' + toneClass + '">' +
+      '      <div class="today-score-label">Boating score</div>' +
+      '      <div class="today-score-word">' + ratingWord + "</div>" +
+      '      <div class="today-score-num">' + (score == null ? "-" : score) + "</div>" +
+      "    </div>" +
       "  </div>" +
 
       "</div>"
   );
 
+  // Keep your existing overall card tone
   applyCardTone(document.getElementById("tideCard"), score);
 
+  // Wire click ? day page
   var tideEl = document.getElementById("tideCard");
   if (tideEl && !tideEl.dataset.daylinkWired) {
     tideEl.dataset.daylinkWired = "1";

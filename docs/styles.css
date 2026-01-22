@@ -537,3 +537,218 @@ h2 {
 
 .today-left{ min-width: 0; }
 
+/* Today card: headline + 2x2 chips + score badge */
+
+.today-grid{
+  display: grid;
+  grid-template-columns: 1fr 120px;
+  gap: 14px;
+  align-items: start;
+}
+
+.today-left{ min-width: 0; }
+.today-spacer-tight{ height: 8px; }
+
+.today-headline{
+  font-size: 16px;
+  font-weight: 900;
+  letter-spacing: -0.01em;
+  line-height: 1.18;
+  color: rgba(232, 238, 247, 0.98);
+}
+
+.today-headline-strong{
+  font-weight: 900;
+  color: rgba(232, 238, 247, 1);
+}
+
+.today-section-title{
+  font-weight: 800;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(232, 238, 247, 0.78);
+}
+
+.today-footer{
+  font-size: 11px;
+  color: rgba(232, 238, 247, 0.60);
+  line-height: 1.25;
+}
+
+/* 2x2 chips */
+.today-chips{
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.today-chip{
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  padding: 10px 10px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.today-chip-top{
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 6px;
+  color: rgba(232, 238, 247, 0.70);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.today-chip-top svg{
+  width: 14px;
+  height: 14px;
+  opacity: 0.95;
+}
+
+.today-chip-value{
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  line-height: 1.1;
+}
+
+.today-chip-main{
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(232, 238, 247, 0.96);
+}
+
+.today-chip-sub{
+  font-size: 12px;
+  font-weight: 800;
+  color: rgba(232, 238, 247, 0.78);
+}
+
+/* Temp chip: “feels …” slightly quieter so it doesn’t overpower the row */
+.today-chip-feels{
+  font-size: 11px;
+  font-weight: 800;
+  color: rgba(232, 238, 247, 0.72);
+  white-space: nowrap;
+}
+
+/* Condition chip: icon + words, centered */
+.today-chip--cond{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.today-chip-cond{
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  font-weight: 900;
+  color: rgba(232, 238, 247, 0.96);
+  text-transform: lowercase;
+  line-height: 1.1;
+}
+
+.today-chip-cond svg{
+  width: 18px;
+  height: 18px;
+  opacity: 0.95;
+}
+
+/* Score badge (tone-coloured, “opaque-looking”) */
+.today-score-wrap{
+  display: flex;
+  justify-content: flex-end;
+}
+
+.today-score-badge{
+  width: 120px;
+  border-radius: 18px;
+  padding: 10px 10px 12px 10px;
+  text-align: right;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.30),
+    inset 0 1px 0 rgba(255, 255, 255, 0.10);
+}
+
+/* Uses the SAME tone class names as your card.
+   Alpha is higher here to read “opaque” against the glassy card. */
+.today-score-badge.tone-excellent{
+  background: rgba(0, 200, 120, 0.52);
+  border-color: rgba(0, 200, 120, 0.42);
+  box-shadow:
+    0 10px 24px rgba(0,0,0,0.30),
+    0 0 26px rgba(0,200,120,0.14),
+    inset 0 1px 0 rgba(255,255,255,0.12);
+}
+.today-score-badge.tone-good{
+  background: rgba(80, 140, 255, 0.52);
+  border-color: rgba(80, 140, 255, 0.42);
+  box-shadow:
+    0 10px 24px rgba(0,0,0,0.30),
+    0 0 26px rgba(80,140,255,0.14),
+    inset 0 1px 0 rgba(255,255,255,0.12);
+}
+.today-score-badge.tone-ok{
+  background: rgba(255, 170, 0, 0.50);
+  border-color: rgba(255, 170, 0, 0.40);
+  box-shadow:
+    0 10px 24px rgba(0,0,0,0.30),
+    0 0 22px rgba(255,170,0,0.12),
+    inset 0 1px 0 rgba(255,255,255,0.12);
+}
+.today-score-badge.tone-poor{
+  background: rgba(255, 80, 80, 0.50);
+  border-color: rgba(255, 80, 80, 0.40);
+  box-shadow:
+    0 10px 24px rgba(0,0,0,0.30),
+    0 0 22px rgba(255,80,80,0.12),
+    inset 0 1px 0 rgba(255,255,255,0.12);
+}
+.today-score-badge.tone-avoid{
+  background: rgba(140, 140, 140, 0.56);
+  border-color: rgba(140, 140, 140, 0.40);
+  box-shadow:
+    0 10px 24px rgba(0,0,0,0.30),
+    0 0 18px rgba(140,140,140,0.10),
+    inset 0 1px 0 rgba(255,255,255,0.12);
+}
+
+.today-score-label{
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: rgba(232, 238, 247, 0.74);
+}
+
+.today-score-word{
+  margin-top: 6px;
+  font-size: 14px;
+  font-weight: 900;
+  letter-spacing: 0.10em;
+  text-transform: uppercase;
+  color: rgba(232, 238, 247, 0.95);
+  line-height: 1.1;
+}
+
+.today-score-num{
+  margin-top: 2px;
+  font-size: 34px;
+  font-weight: 900;
+  line-height: 0.95;
+  color: rgba(232, 238, 247, 1);
+}
+
+.today-chip-value{
+  min-height: 18px;
+  align-items: center;
+}
+
+
