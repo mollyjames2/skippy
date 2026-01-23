@@ -90,10 +90,21 @@ function hhmmToMinutes(hhmm) {
   return h * 60 + m;
 }
 
-function nowMinutesLocal() {
-  var d = new Date();
-  return d.getHours() * 60 + d.getMinutes();
+function nowMinutesLondon() {
+  var parts = new Intl.DateTimeFormat("en-GB", {
+    timeZone: "Europe/London",
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).formatToParts(new Date());
+
+  var hh = Number((parts.find(function (p) { return p.type === "hour"; }) || {}).value);
+  var mm = Number((parts.find(function (p) { return p.type === "minute"; }) || {}).value);
+
+  if (!isFinite(hh) || !isFinite(mm)) return null;
+  return hh * 60 + mm;
 }
+
 
 /**
  * Derive a display-only "best time to boat" window for TODAY.
@@ -102,45 +113,60 @@ function nowMinutesLocal() {
  * - Returns { startText, end, score } or null
  */
 function deriveTodayBestTimeDisplay(recommended, minHours) {
+  var minsNow = nowMinutesLondon();
+  if (minsNow == null) minsNow = nowMinutesLocal(); // fallback
+
+  var minMins = Math.max(1, Number(minHours) || 2) * 60;
+
+  function windowToDisplay(w) {
+    if (!w || !w.start || !w.end) return null;
+
+    var startMin = hhmmToMinutes(w.start);
+    var endMin = hhmmToMinutes(w.end);
+    if (startMin == null || endMin == null) return null;
+
+    // already ended
+    if (endMin <= minsNow) return null;
+
+    // remaining duration from max(now, start)
+    var effectiveStartMin = Math.max(startMin, minsNow);
+    var remaining = endMin - effectiveStartMin;
+
+    if (remaining < minMins) return null;
+
+    return {
+      startText: (effectiveStartMin > startMin) ? "Now" : w.start,
+      end: w.end,
+      score: w.score
+    };
+  }
+
+  // --- OLD SHAPE: array [{start,end,score}] ---
+  if (Array.isArray(recommended)) {
+    for (var i = 0; i < recommended.length; i++) {
+      var cand = windowToDisplay(recommended[i]);
+      if (cand) return cand;
+    }
+    return null;
+  }
+
+  // --- NEW SHAPE: { excellent:[...], good:[...], ok:[...] } ---
   if (!recommended || typeof recommended !== "object") return null;
 
-  var minsNow = nowMinutesLocal();
-  var minMins = minHours * 60;
-
-  // Tier priority: excellent > good > ok
   var tiers = ["excellent", "good", "ok"];
-
   for (var ti = 0; ti < tiers.length; ti++) {
     var list = recommended[tiers[ti]];
     if (!Array.isArray(list)) continue;
 
-    for (var i = 0; i < list.length; i++) {
-      var w = list[i];
-      if (!w || !w.start || !w.end) continue;
-
-      var startMin = hhmmToMinutes(w.start);
-      var endMin = hhmmToMinutes(w.end);
-      if (startMin == null || endMin == null) continue;
-
-      // If window already ended, skip
-      if (endMin <= minsNow) continue;
-
-      // Determine effective start (Now or original start)
-      var effectiveStartMin = Math.max(startMin, minsNow);
-      var remaining = endMin - effectiveStartMin;
-
-      if (remaining >= minMins) {
-        return {
-          startText: (effectiveStartMin > startMin) ? "Now" : w.start,
-          end: w.end,
-          score: w.score
-        };
-      }
+    for (var j = 0; j < list.length; j++) {
+      var cand2 = windowToDisplay(list[j]);
+      if (cand2) return cand2;
     }
   }
 
   return null;
 }
+
 
 
 /* ---------------------------------------------
