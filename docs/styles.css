@@ -484,15 +484,17 @@ h2 { font-size: 16px; }
 }
 
 /* IMPORTANT: prevent grid overlap on mobile by allowing left column to shrink */
+
 .today-grid{
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 120px; /* <- key */
+  grid-template-columns: minmax(0, 1fr) 104px; /* was 120px (or 1fr 120px) */
   gap: 14px;
   align-items: stretch;
 }
 
-.today-left{
-  min-width: 0; /* <- key */
+.today-left,
+.best-left{
+  min-width: 0; /* critical to prevent text overlapping the badge column */
 }
 
 .today-spacer-tight{ height: 8px; }
@@ -737,17 +739,11 @@ h2 { font-size: 16px; }
 
 .best-grid{
   display: grid;
-  grid-template-columns: minmax(0, 1fr) 120px; /* <- key */
+  grid-template-columns: minmax(0, 1fr) 104px; /* match today */
   gap: 14px;
   align-items: stretch;
 }
 
-.best-left{
-  min-width: 0; /* <- key */
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-}
 
 .best-dayline{
   font-size: 18px;
@@ -780,29 +776,33 @@ h2 { font-size: 16px; }
    Mobile guardrails (prevents overlap on very small screens)
 ----------------------------- */
 
-@media (max-width: 360px){
+
+@media (max-width: 420px){
   .today-grid,
   .best-grid{
-    grid-template-columns: minmax(0, 1fr) 104px;
+    grid-template-columns: minmax(0, 1fr) 96px;
     gap: 12px;
   }
 
   .today-score-stack{
-    width: 104px;
-    max-width: 104px;
+    width: 96px;
+    max-width: 96px;
   }
 
   .today-score-circle{
-    width: 74px;
-    height: 74px;
+    width: 68px;
+    height: 68px;
   }
 
   .today-score-num{
-    font-size: 30px;
+    font-size: 28px;
   }
 
-  /* keep the Today badge lift, but a bit smaller on tiny screens */
+  /* keep Today badge lift, but reduce it slightly on phones */
   #tideCard .today-score-stack{
-    transform: translateY(-28px);
+    transform: translateY(-10px);
   }
 }
+
+
+
