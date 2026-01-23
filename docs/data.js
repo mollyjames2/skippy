@@ -663,8 +663,9 @@ function buildWeekPayloadFromBundle(bundle, place) {
       },
 
       best_time: bestWin
-        ? { start: bestWin.start, end: bestWin.end }
-        : { start: "No recommended window", end: "" },
+        ? { start: bestWin.start, end: bestWin.end, score: bestWin.score, tier: bestWin.tier }
+        : { start: "No recommended window", end: "", score: null, tier: null },
+
     });
   }
 

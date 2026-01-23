@@ -772,6 +772,15 @@ h2 { font-size: 16px; }
   text-align: center;
 }
 
+.time-pill {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-weight: 600;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
 /* -----------------------------
    Mobile guardrails (prevents overlap on very small screens)
 ----------------------------- */
@@ -809,6 +818,5 @@ h2 { font-size: 16px; }
 }
 
 }
-
 
 

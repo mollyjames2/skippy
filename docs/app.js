@@ -392,7 +392,6 @@ function renderTideLine(e, showHeight) {
   return '<div class="small muted">' + type + " " + time + hm + "</div>";
 }
 
-
 function findNextTwoTides(tides, dayOffset) {
   // returns { a, b } where a is soonest and b is next soonest
   var candidates = [];
@@ -431,11 +430,11 @@ function renderTodayTidesCard(dayData) {
   var two = findNextTwoTides(tides, 0);
   var next1 = two.a;
   var next2 = two.b;
-  
+
   // Mark source
   if (next1) next1._fromTomorrow = false;
   if (next2) next2._fromTomorrow = false;
-  
+
   // If only one tide left today, top up from tomorrow
   if (next1 && !next2) {
     var tomorrowModel = dayData.tides_tomorrow_model || [];
@@ -445,7 +444,7 @@ function renderTodayTidesCard(dayData) {
       next2._fromTomorrow = true;
     }
   }
-  
+
   // If none left today, both come from tomorrow
   if (!next1) {
     var tomorrowModel = dayData.tides_tomorrow_model || [];
@@ -531,11 +530,10 @@ function renderTodayTidesCard(dayData) {
       '<div class="spacer today-spacer-tight"></div>' +
 
       // 2) Next tides block
-      
+
       '    <div class="today-section-title">Next tides</div>' +
       (next1 ? renderTideLine(next1, !(next1._fromTomorrow === true)) : '<div class="small muted">-</div>') +
       (next2 ? renderTideLine(next2, !(next2._fromTomorrow === true)) : "") +
-
 
       '<div class="spacer today-spacer-tight"></div>' +
       '    <div class="today-footer">' + footer + "</div>" +
@@ -614,8 +612,6 @@ function renderTodayTidesCard(dayData) {
   }
 }
 
-
-
 /* ---------------------------------------------
    Existing UI code
 --------------------------------------------- */
@@ -673,29 +669,24 @@ function renderWeek(data, loc) {
 
   var bestEl = document.getElementById("bestCard");
 
-  // ---- Helpers scoped to this function (no other file edits needed) ----
-  function forceToneClass(el, toneClass) {
-    if (!el) return;
-    el.classList.remove("tone-excellent", "tone-good", "tone-ok", "tone-poor", "tone-avoid");
-    if (toneClass) el.classList.add(toneClass);
-  }
+  // Small, reusable pill for "Best time to boat" using existing colour scheme.
+  // - Uses best_time.score (avg window score) to pick the same colour class used elsewhere.
+  // - Does NOT try to match the Today/Best Day badge layout.
+  function bestTimePillHtml(bestTime) {
+    var start = bestTime && bestTime.start ? String(bestTime.start) : "-";
+    var end = bestTime && bestTime.end ? String(bestTime.end) : "";
+    var score = (bestTime && isFinite(Number(bestTime.score))) ? Number(bestTime.score) : null;
 
-  // Ensures no legacy click handler survives between renders
-  function setBestCardClick(el, handlerOrNull) {
-    if (!el) return;
+    var text = start;
+    if (end) text = start + "-" + end;
 
-    if (el._bestClickHandler) {
-      el.removeEventListener("click", el._bestClickHandler);
-      el._bestClickHandler = null;
+    // If no real window, return plain text (no pill)
+    if (!end || score == null) {
+      return text;
     }
 
-    if (handlerOrNull) {
-      el._bestClickHandler = handlerOrNull;
-      el.style.cursor = "pointer";
-      el.addEventListener("click", handlerOrNull);
-    } else {
-      el.style.cursor = "default";
-    }
+    // Color scheme comes from pillClass(score), visuals from time-pill
+    return '<span class="time-pill ' + pillClass(score) + '">' + text + "</span>";
   }
 
   // Always clear any previous bestCard click handler first (prevents stale links)
@@ -785,7 +776,7 @@ function renderWeek(data, loc) {
     }
   }
 
-  // ---- Existing days list rendering (unchanged) ----
+  // ---- Days list rendering (FIXED: this must be inside renderWeek) ----
   var daysEl = document.getElementById("days");
   if (!daysEl) return;
 
@@ -808,14 +799,9 @@ function renderWeek(data, loc) {
     var dow = d.dow || "";
     var rating = d.rating || "";
     var score = d.score != null ? d.score : 0;
-    
-    var bestStart = d.best_time && d.best_time.start ? d.best_time.start : "-";
-    var bestEnd = d.best_time && d.best_time.end ? d.best_time.end : "";
-    
-    // If no end time (e.g. "No recommended window"), avoid printing " - "
-    var bestText = bestStart;
-    if (bestEnd) bestText = bestStart + "-" + bestEnd;
 
+    // Best time pill html (colored if a recommended window exists)
+    var bestTimeHtml = bestTimePillHtml(d.best_time);
 
     card.innerHTML =
       "" +
@@ -851,16 +837,15 @@ function renderWeek(data, loc) {
       " m</div>" +
       "</div>" +
       '<div class="spacer"></div>' +
-      '<div class="muted small">Best time to boat: <b>' +
-      bestText +
-      "</b></div>";
+      '<div class="muted small">Best time to boat: ' +
+      bestTimeHtml +
+      "</div>";
 
     daysEl.appendChild(card);
   });
 
   setFooterNote("");
 }
-
 
 function maybeShowSplash() {
   var splash = document.getElementById("splash");
