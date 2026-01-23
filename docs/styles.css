@@ -804,7 +804,7 @@ h2 { font-size: 16px; }
   }
   
   #bestCard .today-score-stack{
-    transform: translateY(-40px);
+    transform: translateY(-20px);
   }
 }
 
