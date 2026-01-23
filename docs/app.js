@@ -736,23 +736,27 @@ function renderWeek(data, loc) {
         setHtml(
           "bestCard",
           "" +
-            // Title: same component as Today card title
+            // Title
             '<div class="today-title">Best day this week</div>' +
             '<div class="spacer"></div>' +
-
+        
             '<div class="best-grid">' +
+        
+            // LEFT COLUMN
             '  <div class="best-left">' +
             '    <div class="best-dayline">' +
                   (bestDay.dow || "") + (bestDay.dow ? " " : "") + (bestDay.label || "") +
             "    </div>" +
-            '    <div class="muted small">Best time to boat: ' +
-                 bestTimePillHtml(bestDay.best_time) +
+        
             '    <div class="muted small" style="margin-top:6px;">' +
-            '    <div class="best-subtle">Tap to explore</div>' +            
-
+            '      Best time to boat: ' +
+                   bestTimePillHtml(bestDay.best_time) +
             "    </div>" +
-            
-            // Badge: reuse Today badge (label + OK + circle number)
+        
+            '    <div class="best-subtle" style="margin-top:8px;">Tap to explore</div>' +
+            "  </div>" +
+        
+            // RIGHT COLUMN — score badge (same as Today)
             '  <div class="today-score-wrap">' +
             '    <div class="today-score-stack">' +
             '      <div class="today-score-label">Boating score</div>' +
@@ -762,6 +766,7 @@ function renderWeek(data, loc) {
             "      </div>" +
             "    </div>" +
             "  </div>" +
+        
             "</div>"
         );
 
