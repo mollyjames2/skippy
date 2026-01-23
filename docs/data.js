@@ -712,7 +712,7 @@ async function buildDayPayloadFromBundle(bundle, place, dayIso) {
   let tidesMeta = {
     source: modelledTides.length ? "model" : "none",
     message: modelledTides.length
-      ? "Modelled tides (±1h) - verify elsewhere"
+      ? "Modelled tides (+/- 1h) - verify elsewhere"
       : "Tide data unavailable",
     updated_at: null,
     station: null,
@@ -739,14 +739,14 @@ async function buildDayPayloadFromBundle(bundle, place, dayIso) {
       const reason = (rss && rss.reason) ? String(rss.reason) : "";
 
       let msg = modelledTides.length
-        ? "Modelled tides (±1h) - verify elsewhere"
+        ? "Modelled tides (+/- 1h) - verify elsewhere"
         : "Tide data unavailable";
 
       if (modelledTides.length) {
         if (reason === "rss_no_events") {
-          msg = "TideTimes missing today - modelled (±1h). Verify";
+          msg = "TideTimes missing today - modelled (+/- 1h). Verify";
         } else if (reason === "rss_fetch_failed") {
-          msg = "TideTimes unreachable - modelled (±1h). Verify";
+          msg = "TideTimes unreachable - modelled (+/- 1h). Verify";
         }
       }
 
