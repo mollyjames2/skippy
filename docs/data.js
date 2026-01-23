@@ -16,6 +16,11 @@ import {
   fallbackDayScoreFromDailyExtrema,
 } from "./common/score.js";
 
+import {
+  windowsByTierFromHourRows,
+  pickBestTierWindow,
+} from "./common/window.js";
+
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 // Daily score preference: whether to average all hours or daylight hours.
@@ -26,6 +31,10 @@ const DAILY_SCORE_HOURS_MODE_KEY = "skippy.score.dailyHoursMode";
 // Score tuning
 const SCORE_PROFILE_KEY = "skippy.score.profile"; // "safety" | "standard" | "opportunity"
 const SCORE_TEMP_KEY = "skippy.score.includeTemp"; // "on" | "off"
+
+// Recommended windows
+// Storage value: integer hours (1..8)
+const MIN_RECOMMENDED_WINDOW_HOURS_KEY = "skippy.recommended.minHours";
 
 function getDailyScoreHoursMode() {
   try {
@@ -52,6 +61,23 @@ function getScoreTempEnabled() {
     return v === "on";
   } catch (e) {
     return false;
+  }
+}
+
+function clampInt(n, a, b) {
+  const x = Math.trunc(Number(n));
+  if (!Number.isFinite(x)) return a;
+  return Math.max(a, Math.min(b, x));
+}
+
+function getMinRecommendedWindowHours() {
+  try {
+    const raw = localStorage.getItem(MIN_RECOMMENDED_WINDOW_HOURS_KEY);
+    if (raw == null || raw === "") return 2;
+    const n = parseInt(raw, 10);
+    return clampInt(n, 1, 8);
+  } catch (e) {
+    return 2;
   }
 }
 
@@ -348,6 +374,86 @@ function summarizeVisibilityKmForDay(dayIso, wHourly) {
 }
 
 /* --------------------------------------------------
+   Hour-row builder (for recommended windows)
+   - Lightweight: only {time:"HH:MM", score:number}
+   - Reuses same weather/marine alignment pattern as Day builder
+-------------------------------------------------- */
+
+function buildHourRowsForDayScore(dayIso, wHourly, mHourly) {
+  const wTimes = (wHourly && wHourly.time) ? wHourly.time : [];
+  const mTimes = (mHourly && mHourly.time) ? mHourly.time : [];
+
+  const marineIndexByTime = {};
+  for (let i = 0; i < mTimes.length; i++) marineIndexByTime[mTimes[i]] = i;
+
+  const hourRows = [];
+
+  for (let i = 0; i < wTimes.length; i++) {
+    const t = String(wTimes[i] || "");
+    if (t.slice(0, 10) !== dayIso) continue;
+
+    const j = marineIndexByTime[t];
+
+    const apparentC = (wHourly.apparent_temperature || [])[i];
+    const windKmhH = (wHourly.wind_speed_10m || [])[i];
+    const gustKmhH = (wHourly.wind_gusts_10m || [])[i];
+    const precipMmH = (wHourly.precipitation || [])[i];
+    const visMH = (wHourly.visibility || [])[i];
+
+    const waveMH = (j != null && mHourly.wave_height) ? mHourly.wave_height[j] : null;
+    const wavePeriodH = (j != null && mHourly.wave_period) ? mHourly.wave_period[j] : null;
+    const waveDirH = (j != null && mHourly.wave_direction) ? mHourly.wave_direction[j] : null;
+
+    const windWaveH = (j != null && mHourly.wind_wave_height) ? mHourly.wind_wave_height[j] : null;
+    const windWaveDir = (j != null && mHourly.wind_wave_direction) ? mHourly.wind_wave_direction[j] : null;
+    const swellH = (j != null && mHourly.swell_wave_height) ? mHourly.swell_wave_height[j] : null;
+    const swellDir = (j != null && mHourly.swell_wave_direction) ? mHourly.swell_wave_direction[j] : null;
+
+    const curMs = (j != null && mHourly.ocean_current_velocity) ? mHourly.ocean_current_velocity[j] : null;
+    const curDir = (j != null && mHourly.ocean_current_direction) ? mHourly.ocean_current_direction[j] : null;
+    const seaTC = (j != null && mHourly.sea_surface_temperature) ? mHourly.sea_surface_temperature[j] : null;
+
+    const score = scoreHour({
+      profile: getScoreProfile(),
+      includeTemp: getScoreTempEnabled(),
+
+      wave_m: waveMH || 0,
+      wave_period_s: wavePeriodH || 0,
+      wave_direction_deg: waveDirH,
+
+      wind_kmh: windKmhH || 0,
+      wind_gust_kmh: gustKmhH,
+
+      wind_wave_height_m: windWaveH,
+      wind_wave_direction_deg: windWaveDir,
+      swell_wave_height_m: swellH,
+      swell_wave_direction_deg: swellDir,
+
+      current_velocity_ms: curMs,
+      current_direction_deg: curDir,
+
+      visibility_m: visMH,
+      precip_mm: precipMmH,
+
+      apparent_temp_c: apparentC,
+      sea_temp_c: seaTC,
+    });
+
+    hourRows.push({
+      time: t.slice(11, 16),
+      score: score,
+    });
+  }
+
+  // Ensure time-sorted
+  hourRows.sort(function (a, b) {
+    return String(a.time).localeCompare(String(b.time));
+  });
+
+  return hourRows;
+}
+
+/* --------------------------------------------------
    Tides (derived from marine.minutely_15.sea_level_height_msl)
    - Semi-diurnal friendly (2H/2L typical, but variable)
    - No forced counts; we detect local extrema in the curve
@@ -462,6 +568,7 @@ function buildWeekPayloadFromBundle(bundle, place) {
   const sunriseIsoArr = wDaily.sunrise || [];
   const sunsetIsoArr = wDaily.sunset || [];
   const dailyScoreMode = getDailyScoreHoursMode();
+  const minWinHours = getMinRecommendedWindowHours();
 
   const todayIso = todayIsoLondon();
   const todayIdx = times.indexOf(todayIso);
@@ -471,6 +578,9 @@ function buildWeekPayloadFromBundle(bundle, place) {
 
   // We want 7 days excluding today.
   const endIdx = Math.min(startIdx + 7, times.length);
+
+  const wHourly = (bundle && bundle.weather && bundle.weather.hourly) ? bundle.weather.hourly : {};
+  const mHourly = (bundle && bundle.marine && bundle.marine.hourly) ? bundle.marine.hourly : {};
 
   const days = [];
   for (let i = startIdx; i < endIdx; i++) {
@@ -487,9 +597,6 @@ function buildWeekPayloadFromBundle(bundle, place) {
       waveMax_m: wave,
       windMax_kmh: windKmh,
     });
-
-    const wHourly = (bundle && bundle.weather && bundle.weather.hourly) ? bundle.weather.hourly : {};
-    const mHourly = (bundle && bundle.marine && bundle.marine.hourly) ? bundle.marine.hourly : {};
 
     const score = scoreDayFromHourlySeries({
       dayIso: date,
@@ -523,6 +630,18 @@ function buildWeekPayloadFromBundle(bundle, place) {
       fallbackScore: fallbackScore,
     });
 
+    // Recommended best window for the week list:
+    // build hour rows (scoreHour) and then compute windows using the same dailyScoreMode+sunWin.
+    const hourRowsForWindows = buildHourRowsForDayScore(date, wHourly, mHourly);
+    const windowsByTier = windowsByTierFromHourRows({
+      hourRows: hourRowsForWindows,
+      minHours: minWinHours,
+      dailyScoreMode: dailyScoreMode,
+      sunriseHHMM: sunWin.sunriseHHMM,
+      sunsetHHMM: sunWin.sunsetHHMM,
+    });
+    const bestWin = pickBestTierWindow(windowsByTier);
+
     days.push({
       date: date,
       dow: formatDow(date),
@@ -543,7 +662,9 @@ function buildWeekPayloadFromBundle(bundle, place) {
         m: round1(wave),
       },
 
-      best_time: { start: "All day", end: "All day" },
+      best_time: bestWin
+        ? { start: bestWin.start, end: bestWin.end }
+        : { start: "No recommended window", end: "" },
     });
   }
 
@@ -774,6 +895,7 @@ async function buildDayPayloadFromBundle(bundle, place, dayIso) {
   // Daily score is derived from the average of hourly scores.
   // Mode is controlled in Settings: all hours vs daylight hours.
   const dailyScoreMode = getDailyScoreHoursMode();
+  const minWinHours = getMinRecommendedWindowHours();
 
   const rawSunriseHHMM = sunrise ? String(sunrise).slice(11, 16) : null;
   const rawSunsetHHMM = sunset ? String(sunset).slice(11, 16) : null;
@@ -786,6 +908,16 @@ async function buildDayPayloadFromBundle(bundle, place, dayIso) {
     sunsetHHMM: sunWin.sunsetHHMM,
     fallbackScore: fallbackDayScore,
   });
+
+  // Recommended windows (tiered) + best window for summary.
+  const windowsByTier = windowsByTierFromHourRows({
+    hourRows: hours,
+    minHours: minWinHours,
+    dailyScoreMode: dailyScoreMode,
+    sunriseHHMM: sunWin.sunriseHHMM,
+    sunsetHHMM: sunWin.sunsetHHMM,
+  });
+  const bestWin = pickBestTierWindow(windowsByTier);
 
   return {
     location: (place && place.name) ? place.name : "",
@@ -800,7 +932,10 @@ async function buildDayPayloadFromBundle(bundle, place, dayIso) {
       condition: weatherCodeToText(code),
       score: dayScore,
 
-      best_time_window: { start: "All day", end: "All day" },
+      best_time_window: bestWin
+        ? { start: bestWin.start, end: bestWin.end }
+        : { start: "No recommended window", end: "" },
+
       tides_status: tides.length ? "Tides available" : "Unavailable",
     },
 
@@ -830,7 +965,9 @@ async function buildDayPayloadFromBundle(bundle, place, dayIso) {
     // This is always modelled (15-min curve). Only populated for dayIso === todayIsoLondon().
     tides_tomorrow_model: tidesTomorrowModel,
 
-    recommended: [{ start: "All day", end: "All day", score: dayScore }],
+    // Stage 2 change: tiered structure for day view (Stage 3 updates renderer)
+    recommended: windowsByTier,
+
     hours: hours,
   };
 }

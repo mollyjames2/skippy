@@ -23,6 +23,19 @@ var SCORE_PROFILE_KEY = "skippy.score.profile";
 // Temperature toggle: "on" | "off"
 var SCORE_TEMP_KEY = "skippy.score.includeTemp";
 
+// Minimum recommended window hours: integer 1..8 (default 2)
+var MIN_RECOMMENDED_WINDOW_HOURS_KEY = "skippy.recommended.minHours";
+
+// ----------------------------
+// Small helpers
+// ----------------------------
+
+function clampInt(n, a, b) {
+  var x = Math.trunc(Number(n));
+  if (!isFinite(x)) return a;
+  return Math.max(a, Math.min(b, x));
+}
+
 // ----------------------------
 // Getters / setters
 // ----------------------------
@@ -77,6 +90,24 @@ function setScoreTemp(v) {
   } catch (e) {}
 }
 
+function getMinRecommendedWindowHours() {
+  var v = "";
+  try {
+    v = localStorage.getItem(MIN_RECOMMENDED_WINDOW_HOURS_KEY) || "";
+  } catch (e) {
+    v = "";
+  }
+  if (!v) return 2;
+  return clampInt(parseInt(v, 10), 1, 8);
+}
+
+function setMinRecommendedWindowHours(n) {
+  var v = clampInt(parseInt(n, 10), 1, 8);
+  try {
+    localStorage.setItem(MIN_RECOMMENDED_WINDOW_HOURS_KEY, String(v));
+  } catch (e) {}
+}
+
 // ----------------------------
 // Segmented controls helpers
 // ----------------------------
@@ -123,6 +154,26 @@ function setupScoreTempToggle() {
 }
 
 // ----------------------------
+// Minimum window select
+// ----------------------------
+
+function setupMinWindowHoursSelect() {
+  var el = byId("minWindowHours");
+  if (!el) return;
+
+  // initial
+  var v = getMinRecommendedWindowHours();
+  el.value = String(v);
+
+  // change
+  el.addEventListener("change", function () {
+    setMinRecommendedWindowHours(el.value);
+    // keep in sync (clamping might adjust)
+    el.value = String(getMinRecommendedWindowHours());
+  });
+}
+
+// ----------------------------
 // Boot
 // ----------------------------
 
@@ -132,6 +183,7 @@ document.addEventListener("DOMContentLoaded", function () {
   setupDailyScoreToggle();
   setupScoreProfileToggle();
   setupScoreTempToggle();
+  setupMinWindowHoursSelect();
 
   var homeBtn = byId("homeBtn");
   if (homeBtn) {

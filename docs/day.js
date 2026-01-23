@@ -172,6 +172,85 @@ function renderHourlyTable(hoursEl, mode, hours, sunrise, sunset) {
   });
 }
 
+function formatWindowRange(start, end) {
+  // UI spec prefers en dash and no "24:00" (data layer already enforces this).
+  return String(start || "") + "\u2013" + String(end || "");
+}
+
+function renderRecommendedWindows(windowsEl, recommended) {
+  windowsEl.innerHTML = "";
+
+  // Backward-compat: old shape was an array [{start,end,score}]
+  if (Array.isArray(recommended)) {
+    if (!recommended.length) {
+      windowsEl.innerHTML = '<div class="muted small">No recommended window</div>';
+      return;
+    }
+
+    recommended.forEach(function (w) {
+      var row = document.createElement("div");
+      row.className = "row";
+      row.innerHTML =
+        "<div><b>" +
+        formatWindowRange(w.start, w.end) +
+        "</b></div>" +
+        '<div class="muted small">' +
+        (w.score != null ? (w.score + "/100") : "") +
+        "</div>";
+      windowsEl.appendChild(row);
+    });
+    return;
+  }
+
+  // New shape: { excellent:[...], good:[...], ok:[...] }
+  var byTier = (recommended && typeof recommended === "object") ? recommended : null;
+  var excellent = byTier && Array.isArray(byTier.excellent) ? byTier.excellent : [];
+  var good = byTier && Array.isArray(byTier.good) ? byTier.good : [];
+  var ok = byTier && Array.isArray(byTier.ok) ? byTier.ok : [];
+
+  if (!excellent.length && !good.length && !ok.length) {
+    windowsEl.innerHTML = '<div class="muted small">No recommended window</div>';
+    return;
+  }
+
+  function section(title, list) {
+    if (!list || !list.length) return;
+
+    var head = document.createElement("div");
+    head.className = "muted small";
+    head.style.marginBottom = "6px";
+    head.style.fontWeight = "800";
+    head.textContent = title;
+    windowsEl.appendChild(head);
+
+    list.forEach(function (w) {
+      var row = document.createElement("div");
+      row.className = "row";
+      row.innerHTML =
+        "<div><b>" +
+        formatWindowRange(w.start, w.end) +
+        "</b></div>" +
+        '<div class="muted small">' +
+        (w.score != null ? (w.score + "/100") : "") +
+        "</div>";
+      windowsEl.appendChild(row);
+    });
+
+    var spacer = document.createElement("div");
+    spacer.className = "spacer";
+    windowsEl.appendChild(spacer);
+  }
+
+  section("Excellent", excellent);
+  section("Good", good);
+  section("OK", ok);
+
+  // If last section added a spacer, remove it to avoid extra bottom gap
+  if (windowsEl.lastChild && windowsEl.lastChild.classList && windowsEl.lastChild.classList.contains("spacer")) {
+    windowsEl.removeChild(windowsEl.lastChild);
+  }
+}
+
 function renderDay(data, loc) {
   var locName = loc && loc.name ? loc.name : (data.location || "South West UK");
 
@@ -255,21 +334,7 @@ function renderDay(data, loc) {
 
   var windows = document.getElementById("windows");
   if (windows) {
-    windows.innerHTML = "";
-    (data.recommended || []).forEach(function (w) {
-      var row = document.createElement("div");
-      row.className = "row";
-      row.innerHTML =
-        "<div><b>" +
-        w.start +
-        " - " +
-        w.end +
-        "</b></div>" +
-        '<div class="muted small">' +
-        w.score +
-        "/100</div>";
-      windows.appendChild(row);
-    });
+    renderRecommendedWindows(windows, data.recommended);
   }
 
   var hoursEl = document.getElementById("hours");

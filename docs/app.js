@@ -808,9 +808,14 @@ function renderWeek(data, loc) {
     var dow = d.dow || "";
     var rating = d.rating || "";
     var score = d.score != null ? d.score : 0;
-
+    
     var bestStart = d.best_time && d.best_time.start ? d.best_time.start : "-";
-    var bestEnd = d.best_time && d.best_time.end ? d.best_time.end : "-";
+    var bestEnd = d.best_time && d.best_time.end ? d.best_time.end : "";
+    
+    // If no end time (e.g. "No recommended window"), avoid printing " - "
+    var bestText = bestStart;
+    if (bestEnd) bestText = bestStart + "-" + bestEnd;
+
 
     card.innerHTML =
       "" +
@@ -847,9 +852,7 @@ function renderWeek(data, loc) {
       "</div>" +
       '<div class="spacer"></div>' +
       '<div class="muted small">Best time to boat: <b>' +
-      bestStart +
-      " - " +
-      bestEnd +
+      bestText +
       "</b></div>";
 
     daysEl.appendChild(card);
