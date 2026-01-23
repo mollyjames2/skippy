@@ -800,7 +800,7 @@ h2 { font-size: 16px; }
 
   /* keep Today badge lift, but reduce it slightly on phones */
   #tideCard .today-score-stack{
-    transform: translateY(-100px);
+    transform: translateY(-75px);
   }
 }
 
