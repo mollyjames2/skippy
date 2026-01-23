@@ -781,6 +781,17 @@ h2 { font-size: 16px; }
   line-height: 1.4;
 }
 
+.window-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+.window-row .pill {
+  font-weight: 700;
+}
+
 /* -----------------------------
    Mobile guardrails (prevents overlap on very small screens)
 ----------------------------- */

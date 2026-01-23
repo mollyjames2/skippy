@@ -180,40 +180,22 @@ function formatWindowRange(start, end) {
 function renderRecommendedWindows(windowsEl, recommended) {
   windowsEl.innerHTML = "";
 
-  // Backward-compat: old shape was an array [{start,end,score}]
-  if (Array.isArray(recommended)) {
-    if (!recommended.length) {
-      windowsEl.innerHTML = '<div class="muted small">No recommended window</div>';
-      return;
-    }
-
-    recommended.forEach(function (w) {
-      var row = document.createElement("div");
-      row.className = "row";
-      row.innerHTML =
-        "<div><b>" +
-        formatWindowRange(w.start, w.end) +
-        "</b></div>" +
-        '<div class="muted small">' +
+  function renderRow(w, pillTone) {
+    var row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML =
+      '<div>' +
+        '<span class="pill ' + pillTone + '">' +
+          formatWindowRange(w.start, w.end) +
+        '</span>' +
+      '</div>' +
+      '<div class="muted small">' +
         (w.score != null ? (w.score + "/100") : "") +
-        "</div>";
-      windowsEl.appendChild(row);
-    });
-    return;
+      '</div>';
+    windowsEl.appendChild(row);
   }
 
-  // New shape: { excellent:[...], good:[...], ok:[...] }
-  var byTier = (recommended && typeof recommended === "object") ? recommended : null;
-  var excellent = byTier && Array.isArray(byTier.excellent) ? byTier.excellent : [];
-  var good = byTier && Array.isArray(byTier.good) ? byTier.good : [];
-  var ok = byTier && Array.isArray(byTier.ok) ? byTier.ok : [];
-
-  if (!excellent.length && !good.length && !ok.length) {
-    windowsEl.innerHTML = '<div class="muted small">No recommended window</div>';
-    return;
-  }
-
-  function section(title, list) {
+  function section(title, list, pillTone) {
     if (!list || !list.length) return;
 
     var head = document.createElement("div");
@@ -224,16 +206,7 @@ function renderRecommendedWindows(windowsEl, recommended) {
     windowsEl.appendChild(head);
 
     list.forEach(function (w) {
-      var row = document.createElement("div");
-      row.className = "row";
-      row.innerHTML =
-        "<div><b>" +
-        formatWindowRange(w.start, w.end) +
-        "</b></div>" +
-        '<div class="muted small">' +
-        (w.score != null ? (w.score + "/100") : "") +
-        "</div>";
-      windowsEl.appendChild(row);
+      renderRow(w, pillTone);
     });
 
     var spacer = document.createElement("div");
@@ -241,11 +214,32 @@ function renderRecommendedWindows(windowsEl, recommended) {
     windowsEl.appendChild(spacer);
   }
 
-  section("Excellent", excellent);
-  section("Good", good);
-  section("OK", ok);
+  // Backward compatibility (flat list)
+  if (Array.isArray(recommended)) {
+    if (!recommended.length) {
+      windowsEl.innerHTML = '<div class="muted small">No recommended window</div>';
+      return;
+    }
+    recommended.forEach(function (w) {
+      renderRow(w, pillClass(w.score));
+    });
+    return;
+  }
 
-  // If last section added a spacer, remove it to avoid extra bottom gap
+  var byTier = (recommended && typeof recommended === "object") ? recommended : null;
+  var excellent = byTier && Array.isArray(byTier.excellent) ? byTier.excellent : [];
+  var good = byTier && Array.isArray(byTier.good) ? byTier.good : [];
+  var ok = byTier && Array.isArray(byTier.ok) ? byTier.ok : [];
+
+  if (!excellent.length && !good.length && !ok.length) {
+    windowsEl.innerHTML = '<div class="muted small">No recommended window</div>';
+    return;
+  }
+
+  section("Excellent", excellent, "excellent");
+  section("Good", good, "good");
+  section("OK", ok, "ok");
+
   if (windowsEl.lastChild && windowsEl.lastChild.classList && windowsEl.lastChild.classList.contains("spacer")) {
     windowsEl.removeChild(windowsEl.lastChild);
   }
