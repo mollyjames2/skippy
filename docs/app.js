@@ -745,11 +745,11 @@ function renderWeek(data, loc) {
             '    <div class="best-dayline">' +
                   (bestDay.dow || "") + (bestDay.dow ? " " : "") + (bestDay.label || "") +
             "    </div>" +
-            '    <div class="best-subtle">Tap to explore</div>' +
-            '    <div class="spacer"></div>' +
-
             '    <div class="muted small">Best time to boat: ' +
                  bestTimePillHtml(bestDay.best_time) +
+            '    <div class="muted small" style="margin-top:6px;">' +
+            '    <div class="best-subtle">Tap to explore</div>' +            
+
             "    </div>" +
             
             // Badge: reuse Today badge (label + OK + circle number)
