@@ -677,7 +677,6 @@ async function buildDayPayloadFromBundle(bundle, place, dayIso) {
       condition: weatherCodeToText(codeH),
       feels_like_c: round1(apparentC),
 
-
       wind_kts: kmhToKnotsInt(windKmhH),
       wind_dir: degToCompass(windDirDegH),
       gust_kts: kmhToKnotsInt(gustKmhH),
@@ -713,7 +712,7 @@ async function buildDayPayloadFromBundle(bundle, place, dayIso) {
   let tidesMeta = {
     source: modelledTides.length ? "model" : "none",
     message: modelledTides.length
-      ? "Using 15 minute modelled tide predictions"
+      ? "Modelled tides (±1h) - verify elsewhere"
       : "Tide data unavailable",
     updated_at: null,
     station: null,
@@ -736,11 +735,24 @@ async function buildDayPayloadFromBundle(bundle, place, dayIso) {
         station: rss.station || null,
       };
     } else {
-      // Clean fallback to modelled tides, but with explicit messaging.
+      // Fallback to modelled tides (tight messaging + reasons)
+      const reason = (rss && rss.reason) ? String(rss.reason) : "";
+
+      let msg = modelledTides.length
+        ? "Modelled tides (±1h) - verify elsewhere"
+        : "Tide data unavailable";
+
+      if (modelledTides.length) {
+        if (reason === "rss_no_events") {
+          msg = "TideTimes missing today - modelled (±1h). Verify";
+        } else if (reason === "rss_fetch_failed") {
+          msg = "TideTimes unreachable - modelled (±1h). Verify";
+        }
+      }
+
       tidesMeta = {
         source: modelledTides.length ? "model" : "none",
-        message:
-          "High accuracy tidal data not available - using 15 minute modelled tide predictions",
+        message: msg,
         updated_at: (rss && rss.updated_at) ? rss.updated_at : null,
         station: (rss && rss.station) ? rss.station : null,
       };
