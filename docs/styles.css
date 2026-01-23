@@ -802,6 +802,12 @@ h2 { font-size: 16px; }
   #tideCard .today-score-stack{
     transform: translateY(-70px);
   }
+  
+  #bestCard .today-score-stack{
+    transform: translateY(-40px);
+  }
+}
+
 }
 
 
