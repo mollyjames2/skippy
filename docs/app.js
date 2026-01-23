@@ -80,6 +80,69 @@ function formatUpdatedAtLondon(iso) {
   }).format(d);
 }
 
+function hhmmToMinutes(hhmm) {
+  if (!hhmm || typeof hhmm !== "string") return null;
+  var p = hhmm.split(":");
+  if (p.length !== 2) return null;
+  var h = Number(p[0]);
+  var m = Number(p[1]);
+  if (!isFinite(h) || !isFinite(m)) return null;
+  return h * 60 + m;
+}
+
+function nowMinutesLocal() {
+  var d = new Date();
+  return d.getHours() * 60 + d.getMinutes();
+}
+
+/**
+ * Derive a display-only "best time to boat" window for TODAY.
+ * - Uses existing recommended windows (tiered)
+ * - Does NOT change scoring
+ * - Returns { startText, end, score } or null
+ */
+function deriveTodayBestTimeDisplay(recommended, minHours) {
+  if (!recommended || typeof recommended !== "object") return null;
+
+  var minsNow = nowMinutesLocal();
+  var minMins = minHours * 60;
+
+  // Tier priority: excellent > good > ok
+  var tiers = ["excellent", "good", "ok"];
+
+  for (var ti = 0; ti < tiers.length; ti++) {
+    var list = recommended[tiers[ti]];
+    if (!Array.isArray(list)) continue;
+
+    for (var i = 0; i < list.length; i++) {
+      var w = list[i];
+      if (!w || !w.start || !w.end) continue;
+
+      var startMin = hhmmToMinutes(w.start);
+      var endMin = hhmmToMinutes(w.end);
+      if (startMin == null || endMin == null) continue;
+
+      // If window already ended, skip
+      if (endMin <= minsNow) continue;
+
+      // Determine effective start (Now or original start)
+      var effectiveStartMin = Math.max(startMin, minsNow);
+      var remaining = endMin - effectiveStartMin;
+
+      if (remaining >= minMins) {
+        return {
+          startText: (effectiveStartMin > startMin) ? "Now" : w.start,
+          end: w.end,
+          score: w.score
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
+
 /* ---------------------------------------------
    Tide card helpers
 --------------------------------------------- */
@@ -422,6 +485,22 @@ function renderTodayTidesCard(dayData) {
 
   var score = dayData && dayData.summary ? dayData.summary.score : null;
   var ratingWord = scoreToWord(score);
+  // ---- Best time to boat (time-aware, display only) ----
+  var minHours = (function () {
+    try {
+      var v = localStorage.getItem("skippy.recommended.minHours");
+      var n = Number(v);
+      return (isFinite(n) && n >= 1) ? n : 2;
+    } catch (e) {
+      return 2;
+    }
+  })();
+  
+  var todayBestTime = deriveTodayBestTimeDisplay(
+    dayData && dayData.recommended,
+    minHours
+  );
+
 
   // Next two tides:
   // 1) Prefer upcoming tides today
@@ -519,79 +598,89 @@ function renderTodayTidesCard(dayData) {
       // Title: bigger, mixed case, not bold
       '<div class="today-title">Today on the water</div>' +
       '<div class="spacer"></div>' +
-
+  
       '<div class="today-grid">' +
-
+  
       '  <div class="today-left">' +
-
+  
       // 1) Headline (biggest left-side element)
       headline +
-
+  
       '<div class="spacer today-spacer-tight"></div>' +
-
-      // 2) Next tides block
-
-      '    <div class="today-section-title">Next tides</div>' +
+  
+      // 2) Best time to boat (time-aware, display-only)
+      (todayBestTime
+        ? '<div class="today-section-title">Best time to boat</div>' +
+          '<div class="small muted" style="margin-bottom:6px;">' +
+            '<b>' + todayBestTime.startText + '-' + todayBestTime.end + '</b>' +
+          '</div>' +
+          '<div class="spacer today-spacer-tight"></div>'
+        : ''
+      ) +
+  
+      // 3) Next tides block
+      '<div class="today-section-title">Next tides</div>' +
       (next1 ? renderTideLine(next1, !(next1._fromTomorrow === true)) : '<div class="small muted">-</div>') +
       (next2 ? renderTideLine(next2, !(next2._fromTomorrow === true)) : "") +
-
+  
       '<div class="spacer today-spacer-tight"></div>' +
-      '    <div class="today-footer">' + footer + "</div>" +
-
+      '<div class="today-footer">' + footer + "</div>" +
+  
       '<div class="spacer"></div>' +
-
-      // 3) 2x2 chips (centered content)
-      '    <div class="today-chips">' +
-
+  
+      // 4) 2x2 chips (centered content)
+      '<div class="today-chips">' +
+  
       // Wind chip
-      '      <div class="today-chip">' +
-      '        <div class="today-chip-top">' + svgWind() + '<span class="today-chip-label">Wind</span></div>' +
-      '        <div class="today-chip-value">' +
-      '          <span class="today-chip-main">' + windKts + 'kt</span>' +
-      '          <span class="today-chip-sub">' + windDir + "</span>" +
-                 svgArrowRotated(arrowDeg) +
-      "        </div>" +
-      "      </div>" +
-
+      '<div class="today-chip">' +
+      '  <div class="today-chip-top">' + svgWind() + '<span class="today-chip-label">Wind</span></div>' +
+      '  <div class="today-chip-value">' +
+      '    <span class="today-chip-main">' + windKts + 'kt</span>' +
+      '    <span class="today-chip-sub">' + windDir + '</span>' +
+           svgArrowRotated(arrowDeg) +
+      '  </div>' +
+      '</div>' +
+  
       // Waves chip
-      '      <div class="today-chip">' +
-      '        <div class="today-chip-top">' + svgWave() + '<span class="today-chip-label">Waves</span></div>' +
-      '        <div class="today-chip-value">' +
-      '          <span class="today-chip-main">' + waveM + "m</span>" +
-      "        </div>" +
-      "      </div>" +
-
+      '<div class="today-chip">' +
+      '  <div class="today-chip-top">' + svgWave() + '<span class="today-chip-label">Waves</span></div>' +
+      '  <div class="today-chip-value">' +
+      '    <span class="today-chip-main">' + waveM + 'm</span>' +
+      '  </div>' +
+      '</div>' +
+  
       // Temp chip
-      '      <div class="today-chip">' +
-      '        <div class="today-chip-top">' + svgThermometer() + '<span class="today-chip-label">Temp</span></div>' +
-      '        <div class="today-chip-value">' + tempValueHtml + "</div>" +
-      "      </div>" +
-
-      // Condition chip (icon + words)
-      '      <div class="today-chip today-chip--cond">' +
-      '        <div class="today-chip-cond">' +
-                 svgWeatherFromText(conditionText) +
-      '          <span>' + condValue + "</span>" +
-      "        </div>" +
-      "      </div>" +
-
-      "    </div>" +
-
-      "  </div>" +
-
-      // Right: vertically centered stack + 3D number circle
-      '  <div class="today-score-wrap">' +
-      '    <div class="today-score-stack">' +
-      '      <div class="today-score-label">Boating score</div>' +
-      '      <div class="today-score-word">' + ratingWord + "</div>" +
-      '      <div class="today-score-circle ' + toneClass + '">' +
-      '        <div class="today-score-num">' + (score == null ? "-" : score) + "</div>" +
-      "      </div>" +
-      "    </div>" +
-      "  </div>" +
-
-      "</div>"
+      '<div class="today-chip">' +
+      '  <div class="today-chip-top">' + svgThermometer() + '<span class="today-chip-label">Temp</span></div>' +
+      '  <div class="today-chip-value">' + tempValueHtml + '</div>' +
+      '</div>' +
+  
+      // Condition chip
+      '<div class="today-chip today-chip--cond">' +
+      '  <div class="today-chip-cond">' +
+           svgWeatherFromText(conditionText) +
+      '    <span>' + condValue + '</span>' +
+      '  </div>' +
+      '</div>' +
+  
+      '</div>' + // today-chips
+  
+      '</div>' + // today-left
+  
+      // Right: score badge
+      '<div class="today-score-wrap">' +
+      '  <div class="today-score-stack">' +
+      '    <div class="today-score-label">Boating score</div>' +
+      '    <div class="today-score-word">' + ratingWord + '</div>' +
+      '    <div class="today-score-circle ' + toneClass + '">' +
+      '      <div class="today-score-num">' + (score == null ? '-' : score) + '</div>' +
+      '    </div>' +
+      '  </div>' +
+      '</div>' +
+  
+      '</div>' // today-grid
   );
+
 
   // Keep your existing overall card tone
   applyCardTone(document.getElementById("tideCard"), score);
