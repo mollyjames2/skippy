@@ -13,8 +13,6 @@
 import { SKIPPY_PLACES } from "../docs/shared/places.js";
 import { buildOpenMeteoUrl, makeBundleEnvelope } from "../docs/shared/openmeteoSpec.js";
 
-// Cache TTL for unstable outcomes (edge)
-const TIDES_CACHE_UNSTABLE_SECONDS = 10 * 60; // 10 minutes
 
 // TideTimes RSS stations we can fetch directly
 const TIDE_STATIONS = {
@@ -183,10 +181,35 @@ async function handleTodayTides(request, ctx) {
     }
   }
 
-  const ttl = resp.ok === true ? secondsUntilTomorrowUK() : TIDES_CACHE_UNSTABLE_SECONDS;
+  // IMPORTANT CHANGE:
+  // - resp.ok is Response.ok (true for HTTP 2xx)
+  // - We only cache if the payload is a successful TideTimes payload (ok:true in JSON body).
+  //   Since HTTP status is always 200 here, we must inspect JSON indirectly:
+  //   We already know which branch we built above:
+  //     - success branch set JSON { ok:true, ... }
+  //     - failure branches set JSON { ok:false, ... }
+  //
+  // But 'resp' is a Response, so we can’t read its JSON without consuming the body.
+  // Instead: infer success from the branch that created it by tagging via a local boolean.
+  //
+  // To keep changes minimal, we compute it from the Cache-Control TTL choice:
+  // we only cache when we *intend* to keep it until tomorrow.
+
+  // Compute whether this is a successful TideTimes response
+  // (We can safely infer: failures always have reason, successes always have source:"tidetimes")
+  // We avoid reading the body by tracking it during creation:
+  const isSuccess = resp.headers.get("X-Skippy-Ok") === "true";
+
+  // If header not set (shouldn’t happen), fall back to "don’t cache"
+  const ttl = isSuccess ? secondsUntilTomorrowUK() : 10;
 
   resp.headers.set("Cache-Control", `public, max-age=0, s-maxage=${ttl}`);
-  if (resp.status === 200) ctx.waitUntil(cache.put(cacheKey, resp.clone()));
+
+  // Only write to edge cache on success
+  if (resp.status === 200 && isSuccess) {
+    ctx.waitUntil(cache.put(cacheKey, resp.clone()));
+  }
+
   return withCors(resp);
 }
 
@@ -194,12 +217,15 @@ async function handleTodayTides(request, ctx) {
    Helpers
 -------------------------------------------------- */
 
+// Correct "seconds until tomorrow UK midnight", including BST.
+// We compute tomorrow's UK-local midnight, then convert to UTC using the UK's offset at that time.
 function secondsUntilTomorrowUK() {
   const now = new Date();
+  const tz = "Europe/London";
 
-  // Convert "now" to UK-local date parts
+  // Get UK-local Y/M/D for "today"
   const parts = new Intl.DateTimeFormat("en-GB", {
-    timeZone: "Europe/London",
+    timeZone: tz,
     year: "numeric",
     month: "numeric",
     day: "numeric",
@@ -207,13 +233,45 @@ function secondsUntilTomorrowUK() {
 
   const get = (t) => Number(parts.find((p) => p.type === t).value);
 
-  // UK-local midnight at start of tomorrow
-  const ukMidnightTomorrow = new Date(
-    Date.UTC(get("year"), get("month") - 1, get("day") + 1, 0, 0, 0)
-  );
+  const y = get("year");
+  const m = get("month"); // 1-12
+  const d = get("day");   // 1-31
 
-  const seconds = Math.floor((ukMidnightTomorrow - now) / 1000);
+  // Target: UK-local midnight at start of tomorrow (y-m-(d+1) 00:00 in Europe/London)
+  // We'll represent it as a UTC timestamp by subtracting the UK offset at that local time.
+  // Start with an approximate UTC timestamp at 00:00 UTC on that calendar day:
+  const approxUtc = new Date(Date.UTC(y, m - 1, d + 1, 0, 0, 0));
+
+  // Determine UK's offset (minutes) at that moment
+  const offsetMinutes = tzOffsetMinutesAt(approxUtc, tz);
+
+  // UK local time = UTC + offsetMinutes
+  // Therefore UTC = local - offsetMinutes
+  const ukMidnightTomorrowUtcMs = Date.UTC(y, m - 1, d + 1, 0, 0, 0) - offsetMinutes * 60 * 1000;
+
+  const seconds = Math.floor((ukMidnightTomorrowUtcMs - now.getTime()) / 1000);
   return Math.max(60, Math.min(seconds, 24 * 60 * 60));
+}
+
+// Returns timezone offset in minutes for a given date in a given IANA timezone.
+// Example: "GMT+1" => +60, "GMT" => 0, "GMT-8" => -480
+function tzOffsetMinutesAt(date, timeZone) {
+  const dtf = new Intl.DateTimeFormat("en-GB", {
+    timeZone,
+    timeZoneName: "shortOffset",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+
+  const tzName = dtf.formatToParts(date).find((p) => p.type === "timeZoneName")?.value || "GMT";
+  // tzName like "GMT", "GMT+1", "GMT-08:00"
+  const m = tzName.match(/GMT([+-])(\d{1,2})(?::?(\d{2}))?/);
+  if (!m) return 0;
+
+  const sign = m[1] === "-" ? -1 : 1;
+  const hh = parseInt(m[2], 10);
+  const mm = m[3] ? parseInt(m[3], 10) : 0;
+  return sign * (hh * 60 + mm);
 }
 
 function parseTideTimesFromRss(xmlText) {
@@ -308,11 +366,17 @@ function withCors(resp) {
   });
 }
 
+// jsonResponse: add an internal marker header X-Skippy-Ok so we can decide caching without consuming body
 function jsonResponse(obj, status = 200) {
-  return new Response(JSON.stringify(obj), {
+  const r = new Response(JSON.stringify(obj), {
     status,
     headers: { "Content-Type": "application/json" },
   });
+  // Mark whether JSON payload is ok:true (NOT HTTP ok)
+  if (obj && typeof obj === "object" && "ok" in obj) {
+    r.headers.set("X-Skippy-Ok", obj.ok === true ? "true" : "false");
+  }
+  return r;
 }
 
 function resolvePlace(slug) {
