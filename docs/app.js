@@ -671,10 +671,10 @@ function renderTodayTidesCard(dayData) {
         if (todayBestTime && todayBestTime.kind === "window") {
           line = '<b>' + todayBestTime.startText + '-' + todayBestTime.end + '</b>';
         } else if (todayBestTime && todayBestTime.kind === "noneLeft") {
-          line = 'Best time to boat: <b>No windows left today</b>';
+          line = '<b>No windows left today</b>';
         } else {
           // noneToday (or any unexpected null/shape)
-          line = 'Best time to boat: <b>No recommended windows today</b>';
+          line = '<b>No recommended windows today</b>';
         }
       
         return (
