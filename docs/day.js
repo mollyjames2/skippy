@@ -425,10 +425,15 @@ function renderDay(data, loc) {
     var dailyScoreMode = (mode === "daylight") ? "daylight" : "allhours";
 
     var adj = adjustedSunWindowForMode(mode, rawSunriseHHMM, rawSunsetHHMM);
-
+    
+      // scoreDayFromHourRows expects hhmm/timeHHMM; our rows use `time`
+    var scoreHourRows = (data.hours || []).map(function (h) {
+      return Object.assign({ hhmm: h.time }, h);
+    });
+    
     var dayScore = scoreDayFromHourRows({
       dailyScoreMode: dailyScoreMode,
-      hourRows: data.hours || [],
+      hourRows: scoreHourRows,  
       sunriseHHMM: adj.sunriseHHMM,
       sunsetHHMM: adj.sunsetHHMM,
       fallbackScore: summaryData.score ?? 0,
