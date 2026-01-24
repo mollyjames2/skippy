@@ -107,64 +107,93 @@ function nowMinutesLondon() {
 
 
 /**
- * Derive a display-only "best time to boat" window for TODAY.
- * - Uses existing recommended windows (tiered)
- * - Does NOT change scoring
- * - Returns { startText, end, score } or null
+ * Best time to boat display logic (Today card only).
+ *
+ * Rules:
+ * - If there are no recommended windows at all today -> noneToday
+ * - If all windows are passed, or only an in-progress window with too little time left and no future windows -> noneLeft
+ * - If we are inside a window and there is >= minHours remaining -> show Now-end
+ * - If we are inside a window but remaining < minHours -> skip to next future window if any
+ * - Otherwise show the next future window start-end
+ *
+ * Returns:
+ *   { kind:"window", startText, end, score? }
+ *   { kind:"noneToday" }
+ *   { kind:"noneLeft" }
  */
 function deriveTodayBestTimeDisplay(recommended, minHours) {
+  // Capture "now" once for this render (matches "based on when the page was loaded/rendered")
   var minsNow = nowMinutesLondon();
   if (minsNow == null) minsNow = nowMinutesLocal(); // fallback
 
-  var minMins = Math.max(1, Number(minHours) || 2) * 60;
+  // "Too late" threshold is based on minHours
+  var minMins = (typeof minHours === "number" && isFinite(minHours) ? minHours : 0) * 60;
 
-  function windowToDisplay(w) {
-    if (!w || !w.start || !w.end) return null;
+  function getAllWindowsFlat(recommended) {
+    // Shape A: array of windows
+    if (Array.isArray(recommended)) return recommended.slice();
+
+    // Shape B: tiered object { excellent:[...], good:[...], ok:[...] }
+    if (!recommended || typeof recommended !== "object") return [];
+    var tiers = ["excellent", "good", "ok"];
+    var out = [];
+    for (var ti = 0; ti < tiers.length; ti++) {
+      var list = recommended[tiers[ti]];
+      if (Array.isArray(list)) out = out.concat(list);
+    }
+    return out;
+  }
+
+  var all = getAllWindowsFlat(recommended);
+  var hadAnyWindowsToday = all.length > 0;
+
+  if (!hadAnyWindowsToday) {
+    return { kind: "noneToday" };
+  }
+
+  // Iterate in order (assumes recommended is already best->next best)
+  for (var i = 0; i < all.length; i++) {
+    var w = all[i];
+    if (!w || !w.start || !w.end) continue;
 
     var startMin = hhmmToMinutes(w.start);
     var endMin = hhmmToMinutes(w.end);
-    if (startMin == null || endMin == null) return null;
+    if (startMin == null || endMin == null) continue;
 
-    // already ended
-    if (endMin <= minsNow) return null;
+    // Window fully passed
+    if (endMin <= minsNow) continue;
 
-    // remaining duration from max(now, start)
-    var effectiveStartMin = Math.max(startMin, minsNow);
-    var remaining = endMin - effectiveStartMin;
+    // Inside current window
+    if (minsNow >= startMin && minsNow < endMin) {
+      var remaining = endMin - minsNow;
 
-    if (remaining < minMins) return null;
+      // If too little time left (based on minHours), skip this window and look for the next future one
+      if (remaining < minMins) {
+        continue;
+      }
 
-    return {
-      startText: (effectiveStartMin > startMin) ? "Now" : w.start,
-      end: w.end,
-      score: w.score
-    };
-  }
-
-  // --- OLD SHAPE: array [{start,end,score}] ---
-  if (Array.isArray(recommended)) {
-    for (var i = 0; i < recommended.length; i++) {
-      var cand = windowToDisplay(recommended[i]);
-      if (cand) return cand;
+      // Otherwise show Now-end
+      return {
+        kind: "window",
+        startText: "Now",
+        end: w.end,
+        score: w.score
+      };
     }
-    return null;
-  }
 
-  // --- NEW SHAPE: { excellent:[...], good:[...], ok:[...] } ---
-  if (!recommended || typeof recommended !== "object") return null;
-
-  var tiers = ["excellent", "good", "ok"];
-  for (var ti = 0; ti < tiers.length; ti++) {
-    var list = recommended[tiers[ti]];
-    if (!Array.isArray(list)) continue;
-
-    for (var j = 0; j < list.length; j++) {
-      var cand2 = windowToDisplay(list[j]);
-      if (cand2) return cand2;
+    // Future window: show start-end
+    if (minsNow < startMin) {
+      return {
+        kind: "window",
+        startText: w.start,
+        end: w.end,
+        score: w.score
+      };
     }
   }
 
-  return null;
+  // There WERE windows today, but none are suitable/future anymore
+  return { kind: "noneLeft" };
 }
 
 
@@ -634,15 +663,30 @@ function renderTodayTidesCard(dayData) {
   
       '<div class="spacer today-spacer-tight"></div>' +
   
+  
       // 2) Best time to boat (time-aware, display-only)
-      (todayBestTime
-        ? '<div class="today-section-title">Best time to boat</div>' +
+      (function () {
+        var line = "";
+      
+        if (todayBestTime && todayBestTime.kind === "window") {
+          line = '<b>' + todayBestTime.startText + '-' + todayBestTime.end + '</b>';
+        } else if (todayBestTime && todayBestTime.kind === "noneLeft") {
+          line = 'Best time to boat: <b>No windows left today</b>';
+        } else {
+          // noneToday (or any unexpected null/shape)
+          line = 'Best time to boat: <b>No recommended windows today</b>';
+        }
+      
+        return (
+          '<div class="today-section-title">Best time to boat</div>' +
           '<div class="small muted" style="margin-bottom:6px;">' +
-            '<b>' + todayBestTime.startText + '-' + todayBestTime.end + '</b>' +
+            line +
           '</div>' +
           '<div class="spacer today-spacer-tight"></div>'
-        : ''
-      ) +
+        );
+      })() +
+
+      
   
       // 3) Next tides block
       '<div class="today-section-title">Next tides</div>' +
