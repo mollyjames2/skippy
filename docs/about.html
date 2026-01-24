@@ -1,5 +1,5 @@
 <!doctype html>
-<!-- Updated: 2026-01-20 -->
+<!-- Updated: 2026-01-24 -->
 <html lang="en">
   <head>
     <meta charset="utf-8" />
@@ -73,14 +73,67 @@
       <div class="spacer"></div>
 
       <div class="card">
+        <div style="font-weight: 800; margin-bottom: 6px">Hard safety gates</div>
+
+        <div class="muted small">
+          Skippy also applies <b>hard gates</b> for truly unsafe conditions.
+          <br /><br />
+          If a hard gate triggers, the hour (and any daily score derived from it) is forced
+          to <b>Avoid</b> regardless of the normal score calculation.
+          <br /><br />
+          These thresholds are intentionally <b>tunable in the source</b> (not in the UI).
+        </div>
+      </div>
+
+      <div class="spacer"></div>
+
+      <div class="card">
+        <div style="font-weight: 800; margin-bottom: 6px">
+          Environment: Coastal vs Estuary/Sheltered
+        </div>
+
+        <div class="muted small">
+          Skippy includes a Settings toggle for <b>Environment</b>:
+          <br />
+          <b>Coastal</b> (default) vs <b>Estuary/Sheltered</b>.
+          <br /><br />
+          Why? The underlying weather/marine model is relatively coarse and can’t reliably
+          “see” how sheltered conditions upriver can be compared to open water.
+          <br /><br />
+          When you choose <b>Estuary/Sheltered</b>, Skippy:
+          <br />
+          • relaxes some hard gates (especially wave-related), and<br />
+          • reduces how strongly offshore swell/wave inputs dominate the score,
+          to better reflect an upriver trip intent.
+          <br /><br />
+          This is meant to help you avoid missing genuine sheltered boating opportunities
+          when it’s rough outside but manageable upriver.
+        </div>
+      </div>
+
+      <div class="spacer"></div>
+
+      <div class="card">
         <div style="font-weight: 800; margin-bottom: 6px">Factors Skippy considers</div>
 
         <div class="muted small">
           <b>Wind:</b> Stronger winds (and gusts) usually mean harder boating.<br />
-          <b>Waves:</b> Bigger seas reduce comfort and increase risk.<br />
+          <b>Waves:</b> Bigger seas reduce comfort and increase risk (especially offshore).<br />
           <b>Rain:</b> Less pleasant, and can reduce visibility.<br />
           <b>Visibility:</b> Fog / haze can make navigation and lookout harder.<br />
           <b>Daylight:</b> Sunrise/sunset helps you plan around light.
+        </div>
+      </div>
+
+      <div class="spacer"></div>
+
+      <div class="card">
+        <div style="font-weight: 800; margin-bottom: 6px">Daily score hours</div>
+        <div class="muted small">
+          Daily scores can be calculated using <b>all hours</b> or <b>daylight only</b>.
+          <br /><br />
+          The week view and day score follow your Settings preference.
+          The day page also lets you toggle the view locally while you’re looking at a day.
         </div>
       </div>
 
@@ -104,7 +157,7 @@
           Skippy uses the <b>Open-Meteo</b> weather + marine models.
           There are <b>no accounts</b> and <b>no tracking</b> built into the app.
           <br /><br />
-          Your settings and presets are stored locally in your browser.
+          Your settings are stored locally in your browser.
         </div>
       </div>
 
@@ -148,12 +201,9 @@
         </div>
       </div>
 
-      <div class="footer muted small">
-        Skippy is not a substitute for official maritime advice.
-      </div>
+      <div class="footer muted small">Skippy is not a substitute for official maritime advice.</div>
     </div>
 
     <script src="./about.js"></script>
   </body>
 </html>
-

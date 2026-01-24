@@ -1,6 +1,5 @@
 "use strict";
 
-// Updated: 2026-01-20
 
 function byId(id) {
   return document.getElementById(id);
