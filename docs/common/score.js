@@ -6,8 +6,6 @@
 // Notes:
 // - Pure functions (no DOM, no storage)
 // - This module now also owns DAILY aggregation for scoring (allhours vs daylight)
-// - The core per-hour formula is intentionally preserved for now:
-//     score = 100 - wave_m * 20 - wind_kmh
 //
 // Expected "dailyScoreMode":
 //   - "allhours"  : use all available hours for the day score
@@ -81,6 +79,36 @@ const HARD_GATES = {
   },
 };
 
+/* --------------------------------------------------
+   ENVIRONMENT FACTORS (tunable)
+   Goal: the offshore model can't "see" shelter, so in estuary mode we dampen
+   wave-driven inputs so you don't miss genuine upriver opportunities.
+
+   These factors scale *inputs* before hazards are computed.
+   (Hard gates still apply first.)
+-------------------------------------------------- */
+
+const ENVIRONMENT_FACTORS = {
+  coastal: {
+    wave: 1.0,
+    windWave: 1.0,
+    swell: 1.0,
+    current: 1.0,
+    // period left unchanged by default (see note below)
+    period: 1.0,
+  },
+
+  // Suggested defaults: "clear difference but not ignore waves"
+  // Tune these if you want estuary to be more/less opportunity-finding.
+  estuary: {
+    wave: 0.65,
+    windWave: 0.65,
+    swell: 0.55,
+    current: 0.90,
+    period: 1.0,
+  },
+};
+
 function normalizeEnvironment(env) {
   return env === "estuary" ? "estuary" : "coastal";
 }
@@ -133,6 +161,31 @@ function hardGateTriggered(input) {
   return false;
 }
 
+function applyEnvironmentFactors(opts, env) {
+  const e = normalizeEnvironment(env);
+  const f = ENVIRONMENT_FACTORS[e] || ENVIRONMENT_FACTORS.coastal;
+
+  function scaleFinite(n, mult) {
+    const x = Number(n);
+    const m = Number(mult);
+    if (!Number.isFinite(x) || !Number.isFinite(m)) return n;
+    return x * m;
+  }
+
+  // Only scale the wave-driven / sea-state inputs.
+  // Wind stays "real" upriver, so we don't touch wind_kmh or gusts here.
+  return Object.assign({}, opts, {
+    wave_m: scaleFinite(opts.wave_m, f.wave),
+    wind_wave_height_m: scaleFinite(opts.wind_wave_height_m, f.windWave),
+    swell_wave_height_m: scaleFinite(opts.swell_wave_height_m, f.swell),
+    current_velocity_ms: scaleFinite(opts.current_velocity_ms, f.current),
+
+    // Optional: period scaling is exposed, but default is 1.0
+    // (Changing period changes steepness; keep it stable unless you have a reason.)
+    wave_period_s: scaleFinite(opts.wave_period_s, f.period),
+  });
+}
+
 /**
  * Convert a numeric score (0-100) into a user-facing rating.
  */
@@ -149,23 +202,19 @@ export function scoreToRating(score) {
 /**
  * Calculate a boating score for a single time slice.
  *
- * CURRENT BEHAVIOUR (kept intentionally):
- *   score = 100 - wave_m * 20 - wind_kmh
- *
- * @param {Object} input
- * @param {number} input.wave_m   Significant wave height in metres.
- * @param {number} input.wind_kmh Wind speed in km/h.
  * @returns {number} Integer score in [0, 100]
  */
 export function calculateBoatingScore(input) {
-  const opts = input || {};
+  const opts0 = input || {};
 
   // --- HARD GATES ---
   // Force truly unsafe conditions to "Avoid" regardless of profile weights.
-  if (hardGateTriggered(opts)) return 0;
+  if (hardGateTriggered(opts0)) return 0;
 
-  // Backwards compatibility: if callers only provide wave+wind, we can still
-  // produce a reasonable score using the full model with missing fields.
+  // Apply environment scaling AFTER hard-gates, so gates reflect "what the model says"
+  // about offshore conditions, but the scored hazard reflects sheltered intent.
+  const env = normalizeEnvironment(opts0.environment);
+  const opts = applyEnvironmentFactors(opts0, env);
 
   const profile =
     opts.profile === "safety" || opts.profile === "opportunity"
@@ -704,14 +753,6 @@ export function scoreDayFromHourRows({
  * then using the same aggregation logic as the day page.
  *
  * This is designed to replace data.js's `averageDailyScoreFromHourly(...)`.
- *
- * Required minimal bundle shape:
- *   bundle.weather.hourly.time[]           (ISO strings)
- *   bundle.weather.hourly.windspeed_10m[]  (km/h or m/s depending on your pipeline; expect km/h here)
- *   bundle.marine.hourly.time[]            (ISO strings)
- *   bundle.marine.hourly.wave_height[]     (m)
- *
- * If your variable names differ, adapt in data.js when calling this, or adjust here later.
  */
 export function scoreDayFromHourlySeries({
   dayIso,
@@ -721,7 +762,7 @@ export function scoreDayFromHourlySeries({
   // Scoring options
   scoreProfile,
   includeTemp,
-  environment, // NEW: coastal vs estuary (affects hard gates)
+  environment, // coastal vs estuary
 
   // Weather series
   weatherHourlyTime,
@@ -845,4 +886,3 @@ export function scoreDayFromHourlySeries({
     environment: env,
   });
 }
-
