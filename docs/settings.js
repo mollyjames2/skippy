@@ -23,6 +23,9 @@ var SCORE_PROFILE_KEY = "skippy.score.profile";
 // Temperature toggle: "on" | "off"
 var SCORE_TEMP_KEY = "skippy.score.includeTemp";
 
+// Environment: "coastal" | "estuary" (default coastal)
+var SCORE_ENVIRONMENT_KEY = "skippy.score.environment";
+
 // Minimum recommended window hours: integer 1..8 (default 2)
 var MIN_RECOMMENDED_WINDOW_HOURS_KEY = "skippy.recommended.minHours";
 
@@ -90,6 +93,22 @@ function setScoreTemp(v) {
   } catch (e) {}
 }
 
+function getScoreEnvironment() {
+  var v = "";
+  try {
+    v = localStorage.getItem(SCORE_ENVIRONMENT_KEY) || "";
+  } catch (e) {
+    v = "";
+  }
+  return v === "estuary" ? "estuary" : "coastal";
+}
+
+function setScoreEnvironment(env) {
+  try {
+    localStorage.setItem(SCORE_ENVIRONMENT_KEY, env === "estuary" ? "estuary" : "coastal");
+  } catch (e) {}
+}
+
 function getMinRecommendedWindowHours() {
   var v = "";
   try {
@@ -153,6 +172,10 @@ function setupScoreTempToggle() {
   setupSegmented("scoreTemp", "data-temp", getScoreTemp, setScoreTemp);
 }
 
+function setupScoreEnvironmentToggle() {
+  setupSegmented("scoreEnvironment", "data-env", getScoreEnvironment, setScoreEnvironment);
+}
+
 // ----------------------------
 // Minimum window select
 // ----------------------------
@@ -183,6 +206,7 @@ document.addEventListener("DOMContentLoaded", function () {
   setupDailyScoreToggle();
   setupScoreProfileToggle();
   setupScoreTempToggle();
+  setupScoreEnvironmentToggle();
   setupMinWindowHoursSelect();
 
   var homeBtn = byId("homeBtn");
@@ -199,3 +223,4 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 });
+

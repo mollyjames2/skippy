@@ -51,6 +51,28 @@
 
         <div class="spacer"></div>
 
+        <!-- Environment -->
+        <div class="row" style="align-items:flex-start;">
+          <div class="muted small" style="flex:1;">
+            Environment
+            <div class="muted small" style="margin-top:4px; opacity:0.9;">
+              Coastal uses stricter hard-gate thresholds. Estuary/Sheltered relaxes wave-related hard gates for upriver trips.
+            </div>
+          </div>
+
+          <div class="segmented" id="scoreEnvironment" aria-label="Environment">
+            <button class="segbtn" data-env="coastal" type="button">Coastal</button>
+            <button class="segbtn" data-env="estuary" type="button">Estuary / Sheltered</button>
+          </div>
+        </div>
+
+        <div class="spacer"></div>
+
+        <!-- subtle divider -->
+        <div style="height:1px; background: rgba(255,255,255,0.10);"></div>
+
+        <div class="spacer"></div>
+
         <!-- Scoring style -->
         <div class="row" style="align-items:flex-start;">
           <div class="muted small" style="flex:1;">
@@ -128,3 +150,4 @@
     <script src="./settings.js"></script>
   </body>
 </html>
+

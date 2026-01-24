@@ -32,6 +32,9 @@ const DAILY_SCORE_HOURS_MODE_KEY = "skippy.score.dailyHoursMode";
 const SCORE_PROFILE_KEY = "skippy.score.profile"; // "safety" | "standard" | "opportunity"
 const SCORE_TEMP_KEY = "skippy.score.includeTemp"; // "on" | "off"
 
+// Environment tuning
+const SCORE_ENVIRONMENT_KEY = "skippy.score.environment"; // "coastal" | "estuary" (default coastal)
+
 // Recommended windows
 // Storage value: integer hours (1..8)
 const MIN_RECOMMENDED_WINDOW_HOURS_KEY = "skippy.recommended.minHours";
@@ -61,6 +64,15 @@ function getScoreTempEnabled() {
     return v === "on";
   } catch (e) {
     return false;
+  }
+}
+
+function getScoreEnvironment() {
+  try {
+    const v = localStorage.getItem(SCORE_ENVIRONMENT_KEY);
+    return v === "estuary" ? "estuary" : "coastal";
+  } catch (e) {
+    return "coastal";
   }
 }
 
@@ -264,7 +276,6 @@ async function fetchTodayTidesFromWorker(slug) {
   }
 }
 
-
 /* --------------------------------------------------
    Bundle fetch (browser-first, worker fallback)
 -------------------------------------------------- */
@@ -396,6 +407,8 @@ function buildHourRowsForDayScore(dayIso, wHourly, mHourly) {
 
   const hourRows = [];
 
+  const env = getScoreEnvironment();
+
   for (let i = 0; i < wTimes.length; i++) {
     const t = String(wTimes[i] || "");
     if (t.slice(0, 10) !== dayIso) continue;
@@ -422,6 +435,7 @@ function buildHourRowsForDayScore(dayIso, wHourly, mHourly) {
     const seaTC = (j != null && mHourly.sea_surface_temperature) ? mHourly.sea_surface_temperature[j] : null;
 
     const score = scoreHour({
+      environment: env,
       profile: getScoreProfile(),
       includeTemp: getScoreTempEnabled(),
 
@@ -578,6 +592,8 @@ function buildWeekPayloadFromBundle(bundle, place) {
   const dailyScoreMode = getDailyScoreHoursMode();
   const minWinHours = getMinRecommendedWindowHours();
 
+  const env = getScoreEnvironment();
+
   const todayIso = todayIsoLondon();
   const todayIdx = times.indexOf(todayIso);
 
@@ -602,6 +618,10 @@ function buildWeekPayloadFromBundle(bundle, place) {
     const sunWin = adjustedSunWindowForMode(dailyScoreMode, rawSunrise, rawSunset);
 
     const fallbackScore = fallbackDayScoreFromDailyExtrema({
+      environment: env,
+      scoreProfile: getScoreProfile(),
+      includeTemp: getScoreTempEnabled(),
+
       waveMax_m: wave,
       windMax_kmh: windKmh,
     });
@@ -615,6 +635,7 @@ function buildWeekPayloadFromBundle(bundle, place) {
       // scoring options
       scoreProfile: getScoreProfile(),
       includeTemp: getScoreTempEnabled(),
+      environment: env,
 
       weatherHourlyTime: (wHourly && wHourly.time) ? wHourly.time : [],
       weatherHourlyWindKmh: (wHourly && wHourly.wind_speed_10m) ? wHourly.wind_speed_10m : [],
@@ -722,7 +743,13 @@ async function buildDayPayloadFromBundle(bundle, place, dayIso) {
   const waveMax = (mDaily.wave_height_max || [])[dayIdx];
   const wavePeriodMax = (mDaily.wave_period_max || [])[dayIdx];
 
+  const env = getScoreEnvironment();
+
   const fallbackDayScore = fallbackDayScoreFromDailyExtrema({
+    environment: env,
+    scoreProfile: getScoreProfile(),
+    includeTemp: getScoreTempEnabled(),
+
     waveMax_m: waveMax || 0,
     windMax_kmh: windMaxKmh || 0,
   });
@@ -776,6 +803,7 @@ async function buildDayPayloadFromBundle(bundle, place, dayIso) {
     const seaTC = (j != null && mHourly.sea_surface_temperature) ? mHourly.sea_surface_temperature[j] : null;
 
     const score = scoreHour({
+      environment: env,
       profile: getScoreProfile(),
       includeTemp: getScoreTempEnabled(),
 
@@ -916,6 +944,7 @@ async function buildDayPayloadFromBundle(bundle, place, dayIso) {
     sunriseHHMM: sunWin.sunriseHHMM,
     sunsetHHMM: sunWin.sunsetHHMM,
     fallbackScore: fallbackDayScore,
+    environment: env,
   });
 
   // Recommended windows (tiered) + best window for summary.
@@ -996,3 +1025,4 @@ export async function getDayData(slug, dayIso) {
   const bundle = await getBundle(slug);
   return buildDayPayloadFromBundle(bundle, place, dayIso);
 }
+

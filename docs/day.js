@@ -11,6 +11,9 @@ import { windowsByTierFromHourRows } from "./common/window.js";
 const SETTINGS_DAILY_SCORE_MODE_KEY = "skippy.score.dailyHoursMode"; // "all" | "daylight"
 const MIN_RECOMMENDED_WINDOW_HOURS_KEY = "skippy.recommended.minHours"; // int 1..8 (default 2)
 
+// Environment (shared with Settings)
+const SCORE_ENVIRONMENT_KEY = "skippy.score.environment"; // "coastal" | "estuary"
+
 function getDateParam() {
   var p = new URLSearchParams(window.location.search);
   return p.get("date") || "";
@@ -51,6 +54,16 @@ function getSettingsDailyMode() {
     v = "";
   }
   return v === "daylight" ? "daylight" : "all";
+}
+
+function getScoreEnvironment() {
+  var v = "";
+  try {
+    v = localStorage.getItem(SCORE_ENVIRONMENT_KEY) || "";
+  } catch (e) {
+    v = "";
+  }
+  return v === "estuary" ? "estuary" : "coastal";
 }
 
 function clampInt(n, a, b) {
@@ -167,7 +180,7 @@ function filterHours(mode, hours, sunriseHHMM, sunsetHHMM) {
   return (hours || []).filter(function (h) {
     var tMin = parseHHMMToMin(h.time);
     if (tMin == null) return true;
-    // END EXCLUSIVE (fixes your previous <= which could include an hour beyond rounded sunset)
+    // END EXCLUSIVE
     return tMin >= startMin && tMin < endMin;
   });
 }
@@ -416,27 +429,23 @@ function renderDay(data, loc) {
   var rawSunsetHHMM = tilesData.sunset;
 
   function rerenderForMode(mode) {
-    // 1) Hourly list (what you already do)
+    // 1) Hourly list
     if (hoursEl) {
       renderHourlyTable(hoursEl, mode, data.hours || [], rawSunriseHHMM, rawSunsetHHMM);
     }
 
     // 2) Daily boating score (recomputed)
     var dailyScoreMode = (mode === "daylight") ? "daylight" : "allhours";
-
     var adj = adjustedSunWindowForMode(mode, rawSunriseHHMM, rawSunsetHHMM);
-    
-      // scoreDayFromHourRows expects hhmm/timeHHMM; our rows use `time`
-    var scoreHourRows = (data.hours || []).map(function (h) {
-      return Object.assign({ hhmm: h.time }, h);
-    });
-    
+
+    // scoreDayFromHourRows now supports hour rows with `time: "HH:MM"` directly (no adapter needed).
     var dayScore = scoreDayFromHourRows({
       dailyScoreMode: dailyScoreMode,
-      hourRows: scoreHourRows,  
+      hourRows: data.hours || [],
       sunriseHHMM: adj.sunriseHHMM,
       sunsetHHMM: adj.sunsetHHMM,
       fallbackScore: summaryData.score ?? 0,
+      environment: getScoreEnvironment(),
     });
 
     renderSummary(dayScore, summaryData);
@@ -486,3 +495,4 @@ async function main() {
 }
 
 main();
+

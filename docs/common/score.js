@@ -41,6 +41,98 @@ function hhmmToMinutes(hhmm) {
   return hh * 60 + mm;
 }
 
+/* --------------------------------------------------
+   HARD GATES (tunable)
+   If any gate triggers, the hour/day is forced to "Avoid" (score 0).
+
+   environment:
+     - "coastal"  (default)
+     - "estuary"  (sheltered / upriver intent)
+-------------------------------------------------- */
+
+const HARD_GATES = {
+  coastal: {
+    // Mean wind ≥ 45 km/h (~24 kt) → Avoid
+    windMeanKmh: 45,
+
+    // Gusts ≥ 65 km/h (~35 kt) → Avoid
+    gustKmh: 65,
+
+    // Significant wave height ≥ 1.8 m → Avoid
+    waveM: 1.8,
+
+    // Sig wave height ≥ 1.2 m AND period ≤ 6 s → Avoid
+    shortPeriod: { waveM: 1.2, periodS: 6 },
+
+    // Wind ≥ 33 km/h AND waves ≥ 1.2 m → Avoid
+    combo: { windKmh: 33, waveM: 1.2 },
+  },
+
+  // Estuary / sheltered (upriver intent): keep wind strict, make wave gates storm-only.
+  estuary: {
+    // Keep wind hard gates strong (wind is still very real upriver).
+    windMeanKmh: 45,
+    gustKmh: 65,
+
+    // Wave hard gates: only trigger on extreme offshore conditions.
+    waveM: 3.0,
+    shortPeriod: { waveM: 2.0, periodS: 6 },
+    combo: { windKmh: 33, waveM: 2.0 },
+  },
+};
+
+function normalizeEnvironment(env) {
+  return env === "estuary" ? "estuary" : "coastal";
+}
+
+function hardGateTriggered(input) {
+  const opts = input || {};
+  const env = normalizeEnvironment(opts.environment);
+  const g = HARD_GATES[env] || HARD_GATES.coastal;
+
+  const wind = toNumberOrNaN(opts.wind_kmh);
+  const gust = toNumberOrNaN(opts.wind_gust_kmh);
+  const wave = toNumberOrNaN(opts.wave_m);
+  const period = toNumberOrNaN(opts.wave_period_s);
+
+  // Mean wind gate
+  if (Number.isFinite(wind) && Number.isFinite(g.windMeanKmh) && wind >= g.windMeanKmh) return true;
+
+  // Gust gate
+  if (Number.isFinite(gust) && Number.isFinite(g.gustKmh) && gust >= g.gustKmh) return true;
+
+  // Wave height gate
+  if (Number.isFinite(wave) && Number.isFinite(g.waveM) && wave >= g.waveM) return true;
+
+  // Short/steep sea gate: wave >= X AND period <= Y
+  if (
+    g.shortPeriod &&
+    Number.isFinite(wave) &&
+    Number.isFinite(period) &&
+    Number.isFinite(g.shortPeriod.waveM) &&
+    Number.isFinite(g.shortPeriod.periodS) &&
+    wave >= g.shortPeriod.waveM &&
+    period <= g.shortPeriod.periodS
+  ) {
+    return true;
+  }
+
+  // Combo gate: wind >= X AND wave >= Y
+  if (
+    g.combo &&
+    Number.isFinite(wind) &&
+    Number.isFinite(wave) &&
+    Number.isFinite(g.combo.windKmh) &&
+    Number.isFinite(g.combo.waveM) &&
+    wind >= g.combo.windKmh &&
+    wave >= g.combo.waveM
+  ) {
+    return true;
+  }
+
+  return false;
+}
+
 /**
  * Convert a numeric score (0-100) into a user-facing rating.
  */
@@ -67,6 +159,10 @@ export function scoreToRating(score) {
  */
 export function calculateBoatingScore(input) {
   const opts = input || {};
+
+  // --- HARD GATES ---
+  // Force truly unsafe conditions to "Avoid" regardless of profile weights.
+  if (hardGateTriggered(opts)) return 0;
 
   // Backwards compatibility: if callers only provide wave+wind, we can still
   // produce a reasonable score using the full model with missing fields.
@@ -502,8 +598,22 @@ export function hourIsInDaylight(hhmm, sunriseHHMM, sunsetHHMM) {
  * Compute a fallback daily score using max (or representative) daily values.
  * This matches the existing pattern used in data.js today.
  */
-export function fallbackDayScoreFromDailyExtrema({ waveMax_m = 0, windMax_kmh = 0 } = {}) {
+export function fallbackDayScoreFromDailyExtrema({
+  waveMax_m = 0,
+  windMax_kmh = 0,
+  // Optional scoring options (backwards compatible)
+  environment,
+  scoreProfile,
+  includeTemp,
+} = {}) {
+  const profile =
+    scoreProfile === "safety" || scoreProfile === "opportunity" ? scoreProfile : "standard";
+
   return calculateBoatingScore({
+    environment: normalizeEnvironment(environment),
+    profile,
+    includeTemp: includeTemp === true,
+
     wave_m: toNumberOrNaN(waveMax_m) || 0,
     wind_kmh: toNumberOrNaN(windMax_kmh) || 0,
   });
@@ -525,11 +635,13 @@ export function averageScoreFromHourRows(
   hourRows,
   sunriseHHMM,
   sunsetHHMM,
-  fallbackScore
+  fallbackScore,
+  environment // optional (backwards compatible)
 ) {
   const rows = Array.isArray(hourRows) ? hourRows : [];
   const mode = dailyScoreMode === "daylight" ? "daylight" : "allhours";
   const fb = Number.isFinite(Number(fallbackScore)) ? Number(fallbackScore) : 0;
+  const env = normalizeEnvironment(environment);
 
   let sum = 0;
   let n = 0;
@@ -537,7 +649,10 @@ export function averageScoreFromHourRows(
   for (const row of rows) {
     if (!row) continue;
 
-    const hhmm = row.hhmm || row.timeHHMM || row.time_hhmm; // a few common aliases
+    // FIX: support rows that use `time: "HH:MM"` (day page shape), and normalize with safeHHMM.
+    const hhmmRaw = row.hhmm || row.time || row.timeHHMM || row.time_hhmm; // common aliases
+    const hhmm = safeHHMM(hhmmRaw);
+
     const include = mode === "allhours" ? true : hourIsInDaylight(hhmm, sunriseHHMM, sunsetHHMM);
     if (!include) continue;
 
@@ -545,6 +660,9 @@ export function averageScoreFromHourRows(
     if (!Number.isFinite(s)) {
       // If score isn't present, compute it if we have wave/wind.
       s = scoreHour({
+        // Environment: prefer per-row override if present, else the caller's environment.
+        environment: normalizeEnvironment(row.environment ?? env),
+
         wave_m: row.wave_m ?? row.wave ?? 0,
         wind_kmh: row.wind_kmh ?? row.wind ?? row.windKmh ?? 0,
       });
@@ -569,13 +687,15 @@ export function scoreDayFromHourRows({
   sunriseHHMM,
   sunsetHHMM,
   fallbackScore,
+  environment, // optional
 }) {
   return averageScoreFromHourRows(
     dailyScoreMode,
     hourRows,
     sunriseHHMM,
     sunsetHHMM,
-    fallbackScore
+    fallbackScore,
+    environment
   );
 }
 
@@ -601,6 +721,7 @@ export function scoreDayFromHourlySeries({
   // Scoring options
   scoreProfile,
   includeTemp,
+  environment, // NEW: coastal vs estuary (affects hard gates)
 
   // Weather series
   weatherHourlyTime,
@@ -630,6 +751,7 @@ export function scoreDayFromHourlySeries({
   const profile =
     scoreProfile === "safety" || scoreProfile === "opportunity" ? scoreProfile : "standard";
   const tempOn = includeTemp === true;
+  const env = normalizeEnvironment(environment);
 
   // Build quick lookups for marine values by timestamp.
   function mapByTime(times, values) {
@@ -683,7 +805,9 @@ export function scoreDayFromHourlySeries({
         hhmm,
         wind_kmh: wind,
         wave_m: wave,
+        environment: env, // keep the hourRow self-describing
         score: scoreHour({
+          environment: env,
           profile,
           includeTemp: tempOn,
 
@@ -718,5 +842,7 @@ export function scoreDayFromHourlySeries({
     sunriseHHMM,
     sunsetHHMM,
     fallbackScore: fb,
+    environment: env,
   });
 }
+
