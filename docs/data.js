@@ -245,8 +245,15 @@ async function fetchTodayTidesFromWorker(slug) {
     const apiBase = getApiBase();
     if (!apiBase) return null;
 
-    const url = apiBase + "/api/tides/today?slug=" + encodeURIComponent(slug);
-    const res = await fetch(url, { cache: "no-store" });
+    // Cache-bust for "today" endpoint without relying on fetch cache mode
+    const url =
+      apiBase +
+      "/api/tides/today?slug=" +
+      encodeURIComponent(slug) +
+      "&_ts=" +
+      Date.now();
+
+    const res = await fetch(url);
     if (!res.ok) return null;
 
     const json = await res.json();
@@ -256,6 +263,7 @@ async function fetchTodayTidesFromWorker(slug) {
     return null;
   }
 }
+
 
 /* --------------------------------------------------
    Bundle fetch (browser-first, worker fallback)

@@ -3,7 +3,13 @@
 import { pillClass, requireLocationOrRedirect } from "./common/core.js";
 import { getDayData } from "./data.js";
 
-const HOURS_MODE_KEY = "skippy.day.hoursMode"; // "all" | "daylight"
+// Reuse existing infra
+import { scoreDayFromHourRows } from "./common/score.js";
+import { windowsByTierFromHourRows } from "./common/window.js";
+
+// Settings storage keys (shared behaviour)
+const SETTINGS_DAILY_SCORE_MODE_KEY = "skippy.score.dailyHoursMode"; // "all" | "daylight"
+const MIN_RECOMMENDED_WINDOW_HOURS_KEY = "skippy.recommended.minHours"; // int 1..8 (default 2)
 
 function getDateParam() {
   var p = new URLSearchParams(window.location.search);
@@ -33,16 +39,42 @@ function conditionToIcon(conditionText) {
   return "\ud83c\udf25\ufe0f";
 }
 
-function getHoursMode() {
-  var v = localStorage.getItem(HOURS_MODE_KEY);
+/* ----------------------------
+   Read Settings (for initial mode only)
+---------------------------- */
+
+function getSettingsDailyMode() {
+  var v = "";
+  try {
+    v = localStorage.getItem(SETTINGS_DAILY_SCORE_MODE_KEY) || "";
+  } catch (e) {
+    v = "";
+  }
   return v === "daylight" ? "daylight" : "all";
 }
 
-function setHoursMode(mode) {
-  localStorage.setItem(HOURS_MODE_KEY, mode === "daylight" ? "daylight" : "all");
+function clampInt(n, a, b) {
+  var x = Math.trunc(Number(n));
+  if (!isFinite(x)) return a;
+  return Math.max(a, Math.min(b, x));
 }
 
-function setupToggle(onChange) {
+function getMinRecommendedWindowHours() {
+  var v = "";
+  try {
+    v = localStorage.getItem(MIN_RECOMMENDED_WINDOW_HOURS_KEY) || "";
+  } catch (e) {
+    v = "";
+  }
+  if (!v) return 2;
+  return clampInt(parseInt(v, 10), 1, 8);
+}
+
+/* ----------------------------
+   Toggle (local-only; no persistence)
+---------------------------- */
+
+function setupToggle(initialMode, onChange) {
   var root = document.getElementById("hoursToggle");
   if (!root) return;
 
@@ -53,8 +85,8 @@ function setupToggle(onChange) {
     });
   }
 
-  var mode = getHoursMode();
-  applyActive(mode);
+  // initial state comes from Settings
+  applyActive(initialMode);
 
   root.addEventListener("click", function (e) {
     var target = e.target;
@@ -62,11 +94,14 @@ function setupToggle(onChange) {
     if (!target.classList.contains("segbtn")) return;
 
     var next = target.getAttribute("data-mode") === "daylight" ? "daylight" : "all";
-    setHoursMode(next);
     applyActive(next);
     if (typeof onChange === "function") onChange(next);
   });
 }
+
+/* ----------------------------
+   Time helpers + daylight rounding
+---------------------------- */
 
 function parseHHMMToMin(hhmm) {
   var s = String(hhmm || "");
@@ -77,6 +112,15 @@ function parseHHMMToMin(hhmm) {
   return h * 60 + m;
 }
 
+function minToHHMM(mins) {
+  var m = Number(mins);
+  if (!isFinite(m)) return null;
+  var mm = ((m % 60) + 60) % 60;
+  var hh = Math.floor(m / 60);
+  if (hh < 0 || hh > 23) return null;
+  return String(hh).padStart(2, "0") + ":" + String(mm).padStart(2, "0");
+}
+
 function ceilToHour(mins) {
   return Math.ceil(mins / 60) * 60;
 }
@@ -84,6 +128,30 @@ function ceilToHour(mins) {
 function floorToHour(mins) {
   return Math.floor(mins / 60) * 60;
 }
+
+// Round sunrise up, sunset down to whole hours (same philosophy as scoring/windows)
+function adjustedSunWindowForMode(mode, sunriseHHMM, sunsetHHMM) {
+  if (mode !== "daylight") {
+    return { sunriseHHMM: sunriseHHMM || null, sunsetHHMM: sunsetHHMM || null };
+  }
+
+  var sr = parseHHMMToMin(sunriseHHMM);
+  var ss = parseHHMMToMin(sunsetHHMM);
+  if (sr == null || ss == null) return { sunriseHHMM: sunriseHHMM || null, sunsetHHMM: sunsetHHMM || null };
+  if (ss <= sr) return { sunriseHHMM: sunriseHHMM || null, sunsetHHMM: sunsetHHMM || null };
+
+  var startMin = ceilToHour(sr);
+  var endMin = floorToHour(ss);
+
+  return {
+    sunriseHHMM: minToHHMM(startMin) || sunriseHHMM || null,
+    sunsetHHMM: minToHHMM(endMin) || sunsetHHMM || null,
+  };
+}
+
+/* ----------------------------
+   Hour list filtering (match scoring: end is exclusive)
+---------------------------- */
 
 function filterHours(mode, hours, sunriseHHMM, sunsetHHMM) {
   if (mode !== "daylight") return hours;
@@ -99,7 +167,8 @@ function filterHours(mode, hours, sunriseHHMM, sunsetHHMM) {
   return (hours || []).filter(function (h) {
     var tMin = parseHHMMToMin(h.time);
     if (tMin == null) return true;
-    return tMin >= startMin && tMin <= endMin;
+    // END EXCLUSIVE (fixes your previous <= which could include an hour beyond rounded sunset)
+    return tMin >= startMin && tMin < endMin;
   });
 }
 
@@ -156,7 +225,6 @@ function renderHourlyTable(hoursEl, mode, hours, sunrise, sunset) {
 
     item.appendChild(row);
 
-    // Extras line (optional)
     var extrasBits = [];
     if (h.precip_mm != null && h.precip_mm > 0) extrasBits.push("Precip " + h.precip_mm + " mm");
     if (h.visibility_km != null) extrasBits.push("Vis " + h.visibility_km + " km");
@@ -172,8 +240,11 @@ function renderHourlyTable(hoursEl, mode, hours, sunrise, sunset) {
   });
 }
 
+/* ----------------------------
+   Recommended windows rendering (unchanged)
+---------------------------- */
+
 function formatWindowRange(start, end) {
-  // UI spec prefers en dash and no "24:00" (data layer already enforces this).
   return String(start || "") + "\u2013" + String(end || "");
 }
 
@@ -214,7 +285,6 @@ function renderRecommendedWindows(windowsEl, recommended) {
     windowsEl.appendChild(spacer);
   }
 
-  // Backward compatibility (flat list)
   if (Array.isArray(recommended)) {
     if (!recommended.length) {
       windowsEl.innerHTML = '<div class="muted small">No recommended window</div>';
@@ -245,6 +315,38 @@ function renderRecommendedWindows(windowsEl, recommended) {
   }
 }
 
+/* ----------------------------
+   Summary rerender
+---------------------------- */
+
+function renderSummary(score, summaryData) {
+  var summary = document.getElementById("summary");
+  if (!summary) return;
+
+  var temp = (summaryData.temp_c ?? "—");
+  var cond = (summaryData.condition ?? "—");
+  var s = (score ?? 0);
+
+  summary.innerHTML =
+    "" +
+    '<div class="row">' +
+    "  <div>" +
+    '    <div class="big">' + temp + "&deg;C</div>" +
+    '    <div class="muted">' + cond + "</div>" +
+    "  </div>" +
+    '  <div style="text-align:right;">' +
+    '    <div class="muted small">Boating Score</div>' +
+    '    <div class="' + pillClass(s) + '" style="font-size:16px;">' +
+    s +
+    "</div>" +
+    "  </div>" +
+    "</div>";
+}
+
+/* ----------------------------
+   Main render
+---------------------------- */
+
 function renderDay(data, loc) {
   var locName = loc && loc.name ? loc.name : (data.location || "South West UK");
 
@@ -257,27 +359,8 @@ function renderDay(data, loc) {
   var summaryData = data.summary || {};
   var tilesData = data.tiles || {};
 
-  var summary = document.getElementById("summary");
-  if (summary) {
-    var temp = (summaryData.temp_c ?? "—");
-    var cond = (summaryData.condition ?? "—");
-    var score = (summaryData.score ?? 0);
-
-    summary.innerHTML =
-      "" +
-      '<div class="row">' +
-      "  <div>" +
-      '    <div class="big">' + temp + "&deg;C</div>" +
-      '    <div class="muted">' + cond + "</div>" +
-      "  </div>" +
-      '  <div style="text-align:right;">' +
-      '    <div class="muted small">Boating Score</div>' +
-      '    <div class="' + pillClass(score) + '" style="font-size:16px;">' +
-      score +
-      "</div>" +
-      "  </div>" +
-      "</div>";
-  }
+  // initial summary (will be overwritten by rerenderForMode)
+  renderSummary(summaryData.score ?? 0, summaryData);
 
   var tiles = document.getElementById("tiles");
   if (tiles) {
@@ -326,25 +409,55 @@ function renderDay(data, loc) {
     });
   }
 
-  var windows = document.getElementById("windows");
-  if (windows) {
-    renderRecommendedWindows(windows, data.recommended);
-  }
-
+  var windowsEl = document.getElementById("windows");
   var hoursEl = document.getElementById("hours");
-  if (hoursEl) {
-    var sunriseHHMM = tilesData.sunrise;
-    var sunsetHHMM = tilesData.sunset;
 
-    function rerender(mode) {
-      renderHourlyTable(hoursEl, mode, data.hours || [], sunriseHHMM, sunsetHHMM);
+  var rawSunriseHHMM = tilesData.sunrise;
+  var rawSunsetHHMM = tilesData.sunset;
+
+  function rerenderForMode(mode) {
+    // 1) Hourly list (what you already do)
+    if (hoursEl) {
+      renderHourlyTable(hoursEl, mode, data.hours || [], rawSunriseHHMM, rawSunsetHHMM);
     }
 
-    rerender(getHoursMode());
-    setupToggle(function (mode) {
-      rerender(mode);
+    // 2) Daily boating score (recomputed)
+    var dailyScoreMode = (mode === "daylight") ? "daylight" : "allhours";
+
+    var adj = adjustedSunWindowForMode(mode, rawSunriseHHMM, rawSunsetHHMM);
+
+    var dayScore = scoreDayFromHourRows({
+      dailyScoreMode: dailyScoreMode,
+      hourRows: data.hours || [],
+      sunriseHHMM: adj.sunriseHHMM,
+      sunsetHHMM: adj.sunsetHHMM,
+      fallbackScore: summaryData.score ?? 0,
     });
+
+    renderSummary(dayScore, summaryData);
+
+    // 3) Recommended windows tier list (recomputed)
+    var windowsByTier = windowsByTierFromHourRows({
+      hourRows: data.hours || [],
+      minHours: getMinRecommendedWindowHours(),
+      dailyScoreMode: dailyScoreMode,
+      sunriseHHMM: adj.sunriseHHMM,
+      sunsetHHMM: adj.sunsetHHMM,
+    });
+
+    if (windowsEl) {
+      renderRecommendedWindows(windowsEl, windowsByTier);
+    }
   }
+
+  // Initial mode comes from Settings (NOT any prior day view toggle)
+  var initialMode = getSettingsDailyMode();
+  rerenderForMode(initialMode);
+
+  // Toggle is local-only; does not affect settings
+  setupToggle(initialMode, function (mode) {
+    rerenderForMode(mode);
+  });
 }
 
 async function main() {
