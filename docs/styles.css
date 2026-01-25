@@ -75,6 +75,20 @@ a {
     inset 0 1px 0 rgba(255, 255, 255, 0.10);
 }
 
+
+.hours-mode-card {
+  padding: 10px 12px;
+  cursor: pointer;
+}
+
+.hours-mode-card:active {
+  transform: scale(0.992);
+}
+
+.hours-mode-card .pill {
+  white-space: nowrap;
+}
+
 /* -----------------------------
    Layout utilities
 ----------------------------- */

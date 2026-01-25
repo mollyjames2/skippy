@@ -1036,6 +1036,39 @@ function maybeShowSplash() {
   }, 800);
 }
 
+var DAILY_SCORE_MODE_KEY = "skippy.score.dailyHoursMode";
+
+function getDailyHoursModeForBanner() {
+  try {
+    var v = localStorage.getItem(DAILY_SCORE_MODE_KEY) || "";
+    return v === "daylight" ? "daylight" : "all";
+  } catch (e) {
+    return "all";
+  }
+}
+
+function renderHoursModeBanner() {
+  var pill = document.getElementById("hoursModePill");
+  var card = document.getElementById("hoursModeCard");
+  if (!pill || !card) return;
+
+  var mode = getDailyHoursModeForBanner();
+
+  // Reuse your existing pill color scheme
+  if (mode === "daylight") {
+    pill.className = "pill good";
+    pill.textContent = " Daylight";
+  } else {
+    pill.className = "pill ok";
+    pill.textContent = "All hours";
+  }
+
+  // Tap goes straight to Settings
+  card.onclick = function () {
+    window.location.href = "./settings.html";
+  };
+}
+
 async function main() {
   maybeShowSplash();
 
@@ -1045,6 +1078,10 @@ async function main() {
   // Wire UI first
   wireHomeTopbar();
   wireLocationBar();
+  wireHomeTopbar();
+  wireLocationBar();
+  renderHoursModeBanner();
+
 
   // Get location BEFORE using it (your current code called renderLocationBar(loc) too early)
   var loc = getSavedLocation();
@@ -1109,5 +1146,9 @@ async function main() {
     setFooterNote("Error loading data: " + e.message);
   }
 }
+window.addEventListener("pageshow", function () {
+  renderHoursModeBanner();
+});
+
 
 main();
