@@ -80,9 +80,33 @@ Settings are stored locally in the browser.
 
 Note: The Day page has a local “All hours / Daylight” toggle for viewing; leaving the page returns to the Settings preference.
 
+## Mooring no-access windows
+
+Skippy can also highlight times when your mooring cannot be accessed due to tidal constraints. This makes it easy to see at a glance when access is not possible, without affecting recommended boating windows or hourly scoring.
+
+### How it works
+For each tide event (High or Low), Skippy can apply a **user-defined buffer** either side of the tide time.  
+During this window, the mooring is considered **not accessible**.
+
+Example:
+- High tide at **10:03**
+- High-water buffer set to **1.5 hours**
+- No-access window shown as **08:33–11:33 (High)**
+
+These windows are:
+- Calculated independently for **High water** and **Low water**
+- Automatically clipped to the current day
+- Displayed alongside tide times for quick reference
+
+### Configuration
+Mooring access settings are available in **Settings → Mooring access**:
+
+Buffers are optional and can be set independently.  
+If both values are set to `0`, no mooring access restrictions are shown.
+
 ---
 
-## How it works
+## How the app works
 
 Skippy is intentionally simple in how data flows through the app:
 
@@ -142,11 +166,12 @@ Skippy is intentionally opinionated about simplicity:
 
 ## Project structure
 
-* `docs/` – Static frontend (HTML, CSS, JS)
-* `worker/` – Cloudflare Worker API
-* `docs/shared/` – Shared specs and location data used by both frontend and Worker
-* `legacy/` – Older experiments and retired code
-
+* `docs/` - Static frontend (HTML, CSS, JS)
+* `worker/` - Cloudflare Worker API
+* `docs/shared/` - Shared specs and location data used by both frontend and Worker
+* `docs/common/` - Boating score and recomended window logic
+* `docs/assets/` - Skippy logo
+ 
 ---
 
 ## Running locally

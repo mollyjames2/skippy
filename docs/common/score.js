@@ -70,12 +70,12 @@ const HARD_GATES = {
   estuary: {
     // Keep wind hard gates strong (wind is still very real upriver).
     windMeanKmh: 45,
-    gustKmh: 65,
+    gustKmh: 70,
 
     // Wave hard gates: only trigger on extreme offshore conditions.
-    waveM: 3.0,
-    shortPeriod: { waveM: 2.0, periodS: 6 },
-    combo: { windKmh: 33, waveM: 2.0 },
+    waveM: 3.5,
+    shortPeriod: { waveM: 2.8, periodS: 5 },
+    combo: { windKmh: 35, waveM: 2.8 },
   },
 };
 
@@ -101,10 +101,10 @@ const ENVIRONMENT_FACTORS = {
   // Suggested defaults: "clear difference but not ignore waves"
   // Tune these if you want estuary to be more/less opportunity-finding.
   estuary: {
-    wave: 0.65,
-    windWave: 0.65,
-    swell: 0.55,
-    current: 0.90,
+    wave: 0.55,
+    windWave: 0.45,
+    swell: 0.3,
+    current: 0.80,
     period: 1.0,
   },
 };
