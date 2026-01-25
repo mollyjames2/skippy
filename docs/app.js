@@ -971,43 +971,59 @@ function renderWeek(data, loc) {
     // Best time pill html (colored if a recommended window exists)
     var bestTimeHtml = bestTimePillHtml(d.best_time);
 
+
+
     card.innerHTML =
       "" +
-      '<div class="row">' +
-      "  <div>" +
-      '    <div style="font-weight:800;">' +
-      dow +
-      "</div>" +
-      '    <div class="muted small">' +
-      condition +
-      "</div>" +
-      "  </div>" +
-      '  <div style="text-align:right;">' +
-      '    <div style="font-weight:800;">' +
-      tempC +
-      "&deg;C</div>" +
-      '    <div class="' +
-      pillClass(score) +
-      '">' +
-      rating +
-      "</div>" +
-      "  </div>" +
-      "</div>" +
+    
+      // TOP AREA: left conditions + right centered score pill
+      '<div style="display:flex; align-items:stretch; justify-content:space-between; gap:14px;">' +
+    
+      // LEFT
+      '  <div style="min-width:0;">' +
+      '    <div style="font-weight:800; font-size:18px; line-height:1.1;">' + dow + '</div>' +
+    
+      '    <div class="small muted" style="margin-top:10px;">' +
+             svgWind() + 'Max Wind:&nbsp;&nbsp;<span style="font-weight:700; color:rgba(255,255,255,0.92);">' +
+             windKts + ' kts ' + windDir +
+             '</span>' +
+      '    </div>' +
+    
+      '    <div class="small muted" style="margin-top:10px;">' +
+             svgWave() + 'Max Waves (at sea):&nbsp;&nbsp;<span style="font-weight:700; color:rgba(255,255,255,0.92);">' +
+             waveM + ' m' +
+             '</span>' +
+      '    </div>' +
+    
+      // TEMP + WEATHER (one line after waves)
+      '    <div class="small muted" style="margin-top:10px; display:flex; align-items:center; gap:8px;">' +
+             svgThermometer() +
+      '      <span style="font-weight:800; color:rgba(255,255,255,0.92);">' + tempC + '&deg;C</span>' +
+             // weather icon (no text, per your ask)
+      '      <span style="display:inline-flex; align-items:center; opacity:0.95;">' +
+               svgWeatherFromText(condition) +
+      '      </span>' +
+      '    </div>' +
+      '  </div>' +
+    
+      // RIGHT: vertically centered pill
+      '  <div style="display:flex; align-items:center; justify-content:flex-end;">' +
+      '    <div class="' + pillClass(score) + '" style="padding:10px 16px; border-radius:999px; font-weight:900; font-size:18px; line-height:1; white-space:nowrap;">' +
+             rating + " (" + score + ")" +
+      '    </div>' +
+      '  </div>' +
+    
+      '</div>' +
+    
+      // BOTTOM: best time full width
       '<div class="spacer"></div>' +
-      '<div class="row small muted">' +
-      "  <div>Max Wind: " +
-      windKts +
-      " kts " +
-      windDir +
-      "</div>" +
-      "  <div>Max Waves (at sea): " +
-      waveM +
-      " m</div>" +
-      "</div>" +
-      '<div class="spacer"></div>' +
-      '<div class="muted small">Best time to boat: ' +
-      bestTimeHtml +
-      "</div>";
+      '<div class="small muted" style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">' +
+      '  <span>Best time to boat</span>' +
+      '  <span>' + bestTimeHtml + '</span>' +
+      '</div>';
+
+    
+    
 
     daysEl.appendChild(card);
   });
