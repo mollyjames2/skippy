@@ -212,56 +212,53 @@ function renderHourlyTable(hoursEl, mode, hours, sunrise, sunset) {
 
     var row = document.createElement("div");
     row.className = "hourly-row";
-
+    
     row.innerHTML =
-      // LEFT
-      '<div class="hourly-time"><b>' + h.time + "</b></div>" +
-
-      // MIDDLE
+      // LEFT: time + weather stacked
+      '<div class="hourly-left">' +
+      '  <div class="hourly-time"><b>' + h.time + "</b></div>" +
+      '  <div class="hourly-wx">' + svgWeatherFromText(h.condition || "") + "</div>" +
+      "</div>" +
+    
+      // MIDDLE: line 1 wind/wave/vis, line 2 temp/feels
       '<div class="hourly-mid">' +
-
-      // line 1: wind / wave / vis
+    
       '  <div class="hourly-line1">' +
       '    <div class="hourly-metric">' +
              svgWind() +
       '      <span class="val">' + wind + ' kts</span> ' +
-      '      <span class="bracket">(' + gust + ' kts)</span>' +
+      '      <span class="bracket">(' + gust + ')</span>' +
              (windArrowDeg != null ? svgArrowRotated(windArrowDeg) : "") +
       "    </div>" +
-
+    
       '    <div class="hourly-metric">' +
              svgWave() +
       '      <span class="val">' + wave + ' m</span> ' +
       '      <span class="bracket">(' + period + ' s)</span>' +
       "    </div>" +
-
+    
       '    <div class="hourly-metric">' +
              svgVisibility() +
       '      <span class="val">' + vis + " km</span>" +
       "    </div>" +
       "  </div>" +
-
-      // line 2: weather + temp
+    
       '  <div class="hourly-line2">' +
-      '    <div class="hourly-metric">' +
-             svgWeatherFromText(h.condition || "") +
-      "    </div>" +
       '    <div class="hourly-metric">' +
              svgThermometer() +
       '      <span class="val">' + temp + '°C</span> ' +
       '      <span class="bracket">(' + feels + '°C)</span>' +
       "    </div>" +
       "  </div>" +
-
+    
       "</div>" +
-
-      // RIGHT
+    
+      // RIGHT: score badge
       '<div class="hourly-score">' +
-      '  <span class="' + pillClass(score) + ' hourly-score-badge">' +
-           score +
-      "</span>" +
+      '  <span class="' + pillClass(score) + ' hourly-score-badge">' + score + "</span>" +
       "</div>";
 
+    
     item.appendChild(row);
     hoursEl.appendChild(item);
   });
