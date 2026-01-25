@@ -28,22 +28,32 @@
 
       <div class="spacer"></div>
 
+      <!-- Tides -->
       <div class="card">
         <h2>Tides</h2>
         <div class="spacer"></div>
+
+        <!-- This header row is only populated/shown when mooring no-access is enabled -->
+        <div class="row" id="noAccessHeaderRow" style="display:none;">
+          <div></div>
+          <div class="muted small" style="font-weight:800;">No mooring access</div>
+        </div>
+
         <div class="list" id="tides"></div>
       </div>
 
       <div class="spacer"></div>
 
+      <!-- Recommended windows -->
       <div class="card">
         <h2>Recommended windows</h2>
         <div class="spacer"></div>
         <div class="list" id="windows"></div>
+      </div>
 
-        <div class="spacer"></div>
+      <div class="spacer"></div>
 
-
+      <!-- Hourly conditions -->
       <div class="card">
         <div class="row" style="align-items:flex-start;">
           <h2 style="margin:0;">Hourly conditions</h2>
@@ -55,8 +65,6 @@
         </div>
 
         <div class="spacer"></div>
-
-        <!-- Column header + rows are rendered into this -->
         <div class="list" id="hours"></div>
       </div>
 

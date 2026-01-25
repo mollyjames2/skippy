@@ -1005,6 +1005,12 @@ function renderDay(data, loc) {
   var highNoAccessHours = getMooringHighNoAccessHours();
   var lowNoAccessHours = getMooringLowNoAccessHours();
   var showNoAccessOnRight = (highNoAccessHours > 0) || (lowNoAccessHours > 0);
+  // Show/hide the "No mooring access" header row in the Tides card
+  var hdr = document.getElementById("noAccessHeaderRow");
+  if (hdr) {
+    hdr.style.display = showNoAccessOnRight ? "" : "none";
+  }
+
 
   var tides = document.getElementById("tides");
   if (tides) {
