@@ -386,71 +386,77 @@ h2 { font-size: 16px; }
    Hourly columns (mini-card look)
 ----------------------------- */
 
-.hourly-header {
-  display: grid;
-  /* Time | Cond | Temp | Wind | Waves | Vis | Score */
-  grid-template-columns: 56px 40px 1.1fr 1.35fr 1.25fr 0.9fr 68px;
-  gap: 8px;
-  align-items: center;
-  padding: 0 2px;
-  font-size: 12px;
-  color: rgba(232, 238, 247, 0.7);
-}
-
-.hourly-row {
-  display: grid;
-  grid-template-columns: 56px 40px 1.1fr 1.35fr 1.25fr 0.9fr 68px;
-  gap: 8px;
-  align-items: center;
-}
+/* -----------------------------
+   Hourly mini-cards (no header)
+----------------------------- */
 
 .hourly-item {
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid rgba(255, 255, 255, 0.07);
   border-radius: 14px;
-  padding: 10px 10px;
+  padding: 12px;
+  margin-bottom: 12px;
+}
+
+.hourly-row {
+  display: grid;
+  grid-template-columns: 56px 1fr 68px;
+  gap: 10px;
+  align-items: start;
 }
 
 .hourly-time b {
-  font-size: 18px;
+  font-size: 20px;
   letter-spacing: 0.2px;
 }
 
-.hourly-cond {
-  font-size: 16px;
-  line-height: 1;
-  text-align: center;
-  opacity: 0.9;
+/* Middle block */
+.hourly-mid {
+  min-width: 0;
 }
 
-/* one-line metrics */
+.hourly-line1,
+.hourly-line2 {
+  display: flex;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.hourly-line2 {
+  margin-top: 8px;
+}
+
+/* Metric rows */
+.hourly-metric {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+}
+
 .hourly-metric .val {
   font-weight: 800;
   font-size: 13px;
   color: rgba(255, 255, 255, 0.92);
-  white-space: nowrap;
 }
 
 .bracket {
-  font-size: 0.85em;       /* slightly smaller */
-  opacity: 0.75;
+  font-size: 0.85em;
+  opacity: 0.7;
   font-weight: 600;
-  white-space: nowrap;
 }
 
-.hourly-windcell .dir {
-  font-weight: 800;
-  font-size: 12px;
-  opacity: 0.9;
-  margin-left: 6px;
-  white-space: nowrap;
+/* SVG sizing fixes */
+.hourly-metric svg {
+  width: 16px;
+  height: 16px;
 }
 
-.hourly-vis {
-  white-space: nowrap;
+/* Score badge */
+.hourly-score {
+  text-align: right;
 }
 
-/* Score badge consistent size; still coloured via pillClass(...) */
 .hourly-score-badge {
   display: inline-flex !important;
   width: 42px;
@@ -462,8 +468,6 @@ h2 { font-size: 16px; }
   padding: 0 !important;
 }
 
-/* Keep your extras line */
-.hourly-extras { margin-top: 6px; }
 
 
 /* -----------------------------

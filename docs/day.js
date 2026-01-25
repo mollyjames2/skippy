@@ -184,100 +184,85 @@ function filterHours(mode, hours, sunriseHHMM, sunsetHHMM) {
     return tMin >= startMin && tMin < endMin;
   });
 }
+
 function renderHourlyTable(hoursEl, mode, hours, sunrise, sunset) {
   hoursEl.innerHTML = "";
 
   var list = filterHours(mode, hours || [], sunrise, sunset);
 
-  // Header row
-  var head = document.createElement("div");
-  head.className = "hourly-header";
-  head.innerHTML =
-    '<div class="hcell">Time</div>' +
-    '<div class="hcell">Conditions</div>' +
-    '<div class="hcell">Temp <span class="bracket">(feels like)</span></div>' +
-    '<div class="hcell">Wind <span class="bracket">(Gusts)</span></div>' +
-    '<div class="hcell">Waves at sea <span class="bracket">(Period)</span></div>' +
-    '<div class="hcell">Visibility</div>' +
-    '<div class="hcell" style="text-align:right;">Score</div>';
-  hoursEl.appendChild(head);
-
   list.forEach(function (h) {
     var item = document.createElement("div");
     item.className = "hourly-item";
 
-    var icon = conditionToIcon(h.condition);
     var score = (h.score ?? 0);
 
-    // Temp + feels like
-    var tempMain = (h.temp_c != null ? h.temp_c : "—") + "°C";
-    var feelsVal = (h.feels_like_c != null ? h.feels_like_c : "—") + "°C";
+    // Values
+    var wind = (h.wind_kts != null ? h.wind_kts : "—");
+    var gust = (h.gust_kts != null ? h.gust_kts : "—");
 
-    // Wind + gusts + direction + arrow
-    var windKts = (h.wind_kts != null ? h.wind_kts : "—");
-    var gustKts = (h.gust_kts != null ? h.gust_kts : "—");
-    var dir = (h.wind_dir || "");
-    var windArrowDeg = windArrowDegFromCompass(dir);
+    var wave = (h.wave_m != null ? h.wave_m : "—");
+    var period = (h.wave_period_s != null ? h.wave_period_s : "—");
 
-    // Waves + period
-    var waveM = (h.wave_m != null ? h.wave_m : "—");
-    var periodS = (h.wave_period_s != null ? h.wave_period_s : "—");
+    var vis = (h.visibility_km != null ? h.visibility_km : "—");
 
-    // Visibility
-    var visKm = (h.visibility_km != null ? h.visibility_km : "—");
+    var temp = (h.temp_c != null ? h.temp_c : "—");
+    var feels = (h.feels_like_c != null ? h.feels_like_c : "—");
+
+    var windArrowDeg = windArrowDegFromCompass(h.wind_dir || "");
 
     var row = document.createElement("div");
     row.className = "hourly-row";
 
     row.innerHTML =
-      // Time
+      // LEFT
       '<div class="hourly-time"><b>' + h.time + "</b></div>" +
 
-      // Conditions icon
-      '<div class="hourly-cond" title="' + (h.condition || "") + '">' + icon + "</div>" +
+      // MIDDLE
+      '<div class="hourly-mid">' +
 
-      // Temp (feels like)
-      '<div class="hourly-metric">' +
-      '  <span class="val">' + tempMain + "</span> " +
-      '  <span class="bracket">(' + feelsVal + ")</span>" +
+      // line 1: wind / wave / vis
+      '  <div class="hourly-line1">' +
+      '    <div class="hourly-metric">' +
+             svgWind() +
+      '      <span class="val">' + wind + ' kts</span> ' +
+      '      <span class="bracket">(' + gust + ' kts)</span>' +
+             (windArrowDeg != null ? svgArrowRotated(windArrowDeg) : "") +
+      "    </div>" +
+
+      '    <div class="hourly-metric">' +
+             svgWave() +
+      '      <span class="val">' + wave + ' m</span> ' +
+      '      <span class="bracket">(' + period + ' s)</span>' +
+      "    </div>" +
+
+      '    <div class="hourly-metric">' +
+             svgVisibility() +
+      '      <span class="val">' + vis + " km</span>" +
+      "    </div>" +
+      "  </div>" +
+
+      // line 2: weather + temp
+      '  <div class="hourly-line2">' +
+      '    <div class="hourly-metric">' +
+             svgWeatherFromText(h.condition || "") +
+      "    </div>" +
+      '    <div class="hourly-metric">' +
+             svgThermometer() +
+      '      <span class="val">' + temp + '°C</span> ' +
+      '      <span class="bracket">(' + feels + '°C)</span>' +
+      "    </div>" +
+      "  </div>" +
+
       "</div>" +
 
-      // Wind (gusts) + dir + arrow
-      '<div class="hourly-metric hourly-windcell">' +
-      '  <span class="val">' + windKts + " kts</span> " +
-      '  <span class="bracket">(' + gustKts + " kts)</span>" +
-      (dir ? (' <span class="dir">' + dir + "</span>") : "") +
-      (windArrowDeg != null ? svgArrowRotated(windArrowDeg) : "") +
-      "</div>" +
-
-      // Waves (period)
-      '<div class="hourly-metric">' +
-      '  <span class="val">' + waveM + " m</span> " +
-      '  <span class="bracket">(' + periodS + " s)</span>" +
-      "</div>" +
-
-      // Visibility
-      '<div class="hourly-vis"><span class="val">' + visKm + " km</span></div>" +
-
-      // Score badge (consistent sizing, still coloured by pillClass)
-      '<div class="hourly-score" style="text-align:right;">' +
-      '  <span class="' + pillClass(score) + ' hourly-score-badge">' + score + "</span>" +
+      // RIGHT
+      '<div class="hourly-score">' +
+      '  <span class="' + pillClass(score) + ' hourly-score-badge">' +
+           score +
+      "</span>" +
       "</div>";
 
     item.appendChild(row);
-
-    // Optional extras row (keep precip here if you still want it)
-    var extrasBits = [];
-    if (h.precip_mm != null && h.precip_mm > 0) extrasBits.push("Precip " + h.precip_mm + " mm");
-    // Visibility is now a column, so don't repeat it here.
-
-    if (extrasBits.length > 0) {
-      var extras = document.createElement("div");
-      extras.className = "hourly-extras muted small";
-      extras.textContent = extrasBits.join(" \u00b7 ");
-      item.appendChild(extras);
-    }
-
     hoursEl.appendChild(item);
   });
 }
