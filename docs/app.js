@@ -1056,10 +1056,10 @@ function renderHoursModeBanner() {
 
   // Reuse your existing pill color scheme
   if (mode === "daylight") {
-    pill.className = "pill good";
+    pill.className = "pill ok";
     pill.textContent = " Daylight";
   } else {
-    pill.className = "pill ok";
+    pill.className = "pill good";
     pill.textContent = "All hours";
   }
 
