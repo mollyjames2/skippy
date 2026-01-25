@@ -1068,22 +1068,31 @@ function renderHoursModeBanner() {
   var card = document.getElementById("hoursModeCard");
   if (!pill || !card) return;
 
+  //  Bail if no location
+  var loc = getSavedLocation();
+  if (!loc) {
+    card.style.display = "none"; // or pill.style.display = "none"
+    return;
+  }
+
+  // Ensure visible if location exists
+  card.style.display = "";
+
   var mode = getDailyHoursModeForBanner();
 
-  // Reuse your existing pill color scheme
   if (mode === "daylight") {
     pill.className = "pill ok";
-    pill.textContent = " Daylight";
+    pill.textContent = "Daylight";
   } else {
     pill.className = "pill good";
     pill.textContent = "All hours";
   }
 
-  // Tap goes straight to Settings
   card.onclick = function () {
     window.location.href = "./settings.html";
   };
 }
+
 
 async function main() {
   maybeShowSplash();
