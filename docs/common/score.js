@@ -70,7 +70,7 @@ const HARD_GATES = {
   estuary: {
     // Keep wind hard gates strong (wind is still very real upriver).
     windMeanKmh: 45,
-    gustKmh: 70,
+    gustKmh: 85,
 
     // Wave hard gates: only trigger on extreme offshore conditions.
     waveM: 3.5,
