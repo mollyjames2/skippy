@@ -1068,7 +1068,7 @@ async function main() {
     const daysEl = document.getElementById("days");
     if (daysEl) daysEl.innerHTML = "";
 
-    // If you add id="forecastLabel" to the "7-day forecast" label, you can hide it too:
+    // If you add id="forecastLabel" to the "weekly forecast" label, you can hide it too:
     const forecastLabel = document.getElementById("forecastLabel");
     if (forecastLabel) forecastLabel.style.display = "none";
 

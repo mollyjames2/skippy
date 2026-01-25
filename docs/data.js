@@ -474,6 +474,76 @@ function buildHourRowsForDayScore(dayIso, wHourly, mHourly) {
 
   return hourRows;
 }
+/* --------------------------------------------------
+   Hourly extrema helper (for week cards wind/waves)
+   - Computes MAX wind speed and MAX wave height for a given day
+   - Respects daily score hours mode: "allhours" | "daylight"
+   - For "daylight", uses the *already adjusted* sunrise/sunset window
+     (see adjustedSunWindowForMode) and includes hours where:
+       time >= sunriseHHMM  AND  time < sunsetHHMM
+   - Returns:
+       { windMaxKmh, windDirDegAtMax, waveMaxM }
+     (any field may be null if not found)
+-------------------------------------------------- */
+
+function summarizeWindWavesForDayFromHourly(dayIso, wHourly, mHourly, mode, sunWin) {
+  const wTimes = (wHourly && wHourly.time) ? wHourly.time : [];
+  const mTimes = (mHourly && mHourly.time) ? mHourly.time : [];
+
+  // Build marine time index for alignment (same pattern as buildHourRowsForDayScore)
+  const marineIndexByTime = {};
+  for (let i = 0; i < mTimes.length; i++) marineIndexByTime[mTimes[i]] = i;
+
+  const startHHMM = sunWin && sunWin.sunriseHHMM ? String(sunWin.sunriseHHMM) : null;
+  const endHHMM = sunWin && sunWin.sunsetHHMM ? String(sunWin.sunsetHHMM) : null;
+
+  function inDaylight(hhmm) {
+    if (mode !== "daylight") return true;
+    if (!startHHMM || !endHHMM) return true; // if we can't bound daylight, don't filter
+    // HH:MM lexicographic compare works
+    return hhmm >= startHHMM && hhmm < endHHMM;
+  }
+
+  let windMaxKmh = null;
+  let windDirDegAtMax = null;
+
+  let waveMaxM = null;
+
+  for (let i = 0; i < wTimes.length; i++) {
+    const t = String(wTimes[i] || "");
+    if (t.slice(0, 10) !== dayIso) continue;
+
+    const hhmm = t.slice(11, 16);
+    if (!inDaylight(hhmm)) continue;
+
+    // Wind: weather hourly
+    const windKmhH = Number((wHourly.wind_speed_10m || [])[i]);
+    if (isFinite(windKmhH)) {
+      if (windMaxKmh === null || windKmhH > windMaxKmh) {
+        windMaxKmh = windKmhH;
+
+        const dir = Number((wHourly.wind_direction_10m || [])[i]);
+        windDirDegAtMax = isFinite(dir) ? dir : null;
+      }
+    }
+
+    // Waves: marine hourly, aligned by exact timestamp
+    const j = marineIndexByTime[t];
+    if (j != null && mHourly && mHourly.wave_height) {
+      const waveH = Number(mHourly.wave_height[j]);
+      if (isFinite(waveH)) {
+        if (waveMaxM === null || waveH > waveMaxM) waveMaxM = waveH;
+      }
+    }
+  }
+
+  return {
+    windMaxKmh: windMaxKmh,
+    windDirDegAtMax: windDirDegAtMax,
+    waveMaxM: waveMaxM,
+  };
+}
+
 
 /* --------------------------------------------------
    Tides (derived from marine.minutely_15.sea_level_height_msl)
@@ -572,7 +642,6 @@ function tidesForDay(bundle, dayIso) {
 /* --------------------------------------------------
    Week builder (DAILY only)
 -------------------------------------------------- */
-
 function buildWeekPayloadFromBundle(bundle, place) {
   const wDaily = (bundle && bundle.weather && bundle.weather.daily) ? bundle.weather.daily : {};
   const mDaily = (bundle && bundle.marine && bundle.marine.daily) ? bundle.marine.daily : {};
@@ -581,11 +650,11 @@ function buildWeekPayloadFromBundle(bundle, place) {
   const codes = wDaily.weather_code || [];
   const tmax = wDaily.temperature_2m_max || [];
 
-  const waveMax = mDaily.wave_height_max || [];
-  const windMaxKmh = wDaily.wind_speed_10m_max || [];
+  const waveMaxDaily = mDaily.wave_height_max || [];
+  const windMaxKmhDaily = wDaily.wind_speed_10m_max || [];
 
   // DAILY: Dominant wind direction (10m)
-  const windDirDom = wDaily.wind_direction_10m_dominant || [];
+  const windDirDomDaily = wDaily.wind_direction_10m_dominant || [];
 
   const sunriseIsoArr = wDaily.sunrise || [];
   const sunsetIsoArr = wDaily.sunset || [];
@@ -610,20 +679,44 @@ function buildWeekPayloadFromBundle(bundle, place) {
   for (let i = startIdx; i < endIdx; i++) {
     const date = times[i];
 
-    const wave = (waveMax[i] ?? 0);
-    const windKmh = (windMaxKmh[i] ?? 0);
+    // Daily fallbacks (current behavior)
+    const waveDaily = (waveMaxDaily[i] ?? 0);
+    const windKmhDaily = (windMaxKmhDaily[i] ?? 0);
+    const windDirDegDaily = (windDirDomDaily[i] ?? null);
 
+    // Daylight window (rounded/adjusted based on mode)
     const rawSunrise = sunriseIsoArr[i] ? String(sunriseIsoArr[i]).slice(11, 16) : null;
     const rawSunset = sunsetIsoArr[i] ? String(sunsetIsoArr[i]).slice(11, 16) : null;
     const sunWin = adjustedSunWindowForMode(dailyScoreMode, rawSunrise, rawSunset);
+
+    // --- NEW: compute wind/waves from hourly maxima, filtered by mode/sunWin ---
+    const hourlySummary = summarizeWindWavesForDayFromHourly(
+      date,
+      wHourly,
+      mHourly,
+      dailyScoreMode,
+      sunWin
+    );
+
+    const windKmhForCard = (hourlySummary && hourlySummary.windMaxKmh != null)
+      ? hourlySummary.windMaxKmh
+      : windKmhDaily;
+
+    const windDirDegForCard = (hourlySummary && hourlySummary.windDirDegAtMax != null)
+      ? hourlySummary.windDirDegAtMax
+      : windDirDegDaily;
+
+    const waveForCard = (hourlySummary && hourlySummary.waveMaxM != null)
+      ? hourlySummary.waveMaxM
+      : waveDaily;
 
     const fallbackScore = fallbackDayScoreFromDailyExtrema({
       environment: env,
       scoreProfile: getScoreProfile(),
       includeTemp: getScoreTempEnabled(),
 
-      waveMax_m: wave,
-      windMax_kmh: windKmh,
+      waveMax_m: waveDaily,
+      windMax_kmh: windKmhDaily,
     });
 
     const score = scoreDayFromHourlySeries({
@@ -682,19 +775,19 @@ function buildWeekPayloadFromBundle(bundle, place) {
       score: score,
       rating: scoreToRating(score),
 
+      // UPDATED: use mode-aware maxima for wind/waves
       wind: {
-        kts: kmhToKnotsInt(windKmh),
-        dir: degToCompass(windDirDom[i]),
+        kts: kmhToKnotsInt(windKmhForCard),
+        dir: (windDirDegForCard != null) ? degToCompass(windDirDegForCard) : "",
       },
 
       waves: {
-        m: round1(wave),
+        m: round1(waveForCard),
       },
 
       best_time: bestWin
         ? { start: bestWin.start, end: bestWin.end, score: bestWin.score, tier: bestWin.tier }
         : { start: "No recommended window", end: "", score: null, tier: null },
-
     });
   }
 
@@ -712,6 +805,7 @@ function buildWeekPayloadFromBundle(bundle, place) {
       : null,
   };
 }
+
 
 /* --------------------------------------------------
    Day builder (DAILY summary + HOURLY rows)
