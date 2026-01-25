@@ -995,12 +995,12 @@ function renderWeek(data, loc) {
       "</div>" +
       '<div class="spacer"></div>' +
       '<div class="row small muted">' +
-      "  <div>Wind: " +
+      "  <div>Max Wind: " +
       windKts +
       " kts " +
       windDir +
       "</div>" +
-      "  <div>Waves: " +
+      "  <div>Max Waves (at sea): " +
       waveM +
       " m</div>" +
       "</div>" +
