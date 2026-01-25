@@ -340,6 +340,16 @@ function svgIconWrap(svg) {
   return '<span style="display:inline-flex; align-items:center; line-height:1; margin-right:6px;">' + svg + "</span>";
 }
 
+function svgVisibility() {
+  return svgIconWrap(
+    '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">' +
+      '<path d="M1.5 12s4-6 10.5-6 10.5 6 10.5 6-4 6-10.5 6-10.5-6-10.5-6z" fill="none" stroke="currentColor" stroke-width="2"/>' +
+      '<circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/>' +
+    "</svg>"
+  );
+}
+
+
 function svgWind() {
   return svgIconWrap(
     '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">' +
@@ -452,6 +462,8 @@ function summarizeForSummaryCardFromHours(filteredHours, summaryDataFallback) {
 
   var maxWave = null;
   var periodAtMaxWave = null;
+  
+  var maxVisibility = null;   
 
   // temp/feels: choose hour with max temp; pair feels_like from that hour
   var tempAtMaxTemp = null;
@@ -502,6 +514,8 @@ function summarizeForSummaryCardFromHours(filteredHours, summaryDataFallback) {
 
     wave_m_max: maxWave,
     wave_period_s_at_max: periodAtMaxWave,
+    
+    visibility_km_max: maxVisibility,
 
     temp_c: tempAtMaxTemp,
     feels_like_c: feelsAtMaxTemp,
@@ -537,6 +551,19 @@ function renderSummaryCard(dayScore, summaryData, mode, filteredHours) {
 
   var waveVal = (snap.wave_m_max == null ? "—" : snap.wave_m_max) + " m";
   var periodVal = (snap.wave_period_s_at_max != null ? ("Period " + snap.wave_period_s_at_max + " s") : "");
+  
+  var visVal =
+    snap.visibility_km_max != null
+      ? snap.visibility_km_max + " km"
+      : "—";
+  
+  var visibilityLine =
+    '    <div class="small muted" style="margin-top:10px;">' +
+         svgVisibility() +
+         'Visibility&nbsp;&nbsp;<span style="font-weight:800; color:rgba(255,255,255,0.92);">' +
+         visVal +
+         "</span>" +
+    "    </div>";
 
   var tempVal = (snap.temp_c == null ? "—" : snap.temp_c) + "°C";
   var feelsVal = (snap.feels_like_c != null ? ("(feels like " + snap.feels_like_c + "°C)") : "");
@@ -563,6 +590,12 @@ function renderSummaryCard(dayScore, summaryData, mode, filteredHours) {
            'Max waves (at sea):&nbsp;&nbsp;<span style="font-weight:800; color:rgba(255,255,255,0.92);">' + waveVal + "</span>" +
            (periodVal ? (' <span class="muted small" style="margin-left:8px;">' + periodVal + "</span>") : "") +
     "    </div>" +
+    '    <div class="small muted" style="margin-top:10px;">' +
+           svgVisibility() +
+           'Visibility&nbsp;&nbsp;<span style="font-weight:800; color:rgba(255,255,255,0.92);">' +
+           visVal +
+           "</span>" +
+    "    </div>"; +
 
     '    <div class="small muted" style="margin-top:10px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">' +
            svgThermometer() +
