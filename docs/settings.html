@@ -128,6 +128,62 @@
             <option value="8">8 hours</option>
           </select>
         </div>
+
+        <div class="spacer"></div>
+
+        <!-- subtle divider -->
+        <div style="height:1px; background: rgba(255,255,255,0.10);"></div>
+
+        <div class="spacer"></div>
+
+        <!-- Mooring access windows -->
+        <div style="font-weight:800; margin-bottom:6px;">Mooring access</div>
+        <div class="muted small">
+          Highlight times around high/low water when you <b>cannot</b> access your mooring.
+          Set high-water and low-water limits independently.
+        </div>
+
+        <div class="spacer"></div>
+
+        <div class="row" style="align-items:flex-start;">
+          <div class="muted small" style="flex:1;">
+            High water no-access buffer
+            <div class="muted small" style="margin-top:4px; opacity:0.9;">
+              How long either side of <b>high water</b> you cannot access the mooring.
+            </div>
+          </div>
+
+          <select id="mooringHighNoAccess" class="btn" aria-label="High water no-access buffer (hours)">
+            <option value="0">0 hours</option>
+            <option value="0.5">0.5 hours</option>
+            <option value="1">1 hour</option>
+            <option value="1.5">1.5 hours</option>
+            <option value="2">2 hours</option>
+            <option value="2.5">2.5 hours</option>
+            <option value="3">3 hours</option>
+          </select>
+        </div>
+
+        <div class="spacer"></div>
+
+        <div class="row" style="align-items:flex-start;">
+          <div class="muted small" style="flex:1;">
+            Low water no-access buffer
+            <div class="muted small" style="margin-top:4px; opacity:0.9;">
+              How long either side of <b>low water</b> you cannot access the mooring.
+            </div>
+          </div>
+
+          <select id="mooringLowNoAccess" class="btn" aria-label="Low water no-access buffer (hours)">
+            <option value="0">0 hours</option>
+            <option value="0.5">0.5 hours</option>
+            <option value="1">1 hour</option>
+            <option value="1.5">1.5 hours</option>
+            <option value="2">2 hours</option>
+            <option value="2.5">2.5 hours</option>
+            <option value="3">3 hours</option>
+          </select>
+        </div>
       </div>
 
       <div class="spacer"></div>
@@ -150,4 +206,3 @@
     <script src="./settings.js"></script>
   </body>
 </html>
-

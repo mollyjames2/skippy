@@ -29,6 +29,10 @@ var SCORE_ENVIRONMENT_KEY = "skippy.score.environment";
 // Minimum recommended window hours: integer 1..8 (default 2)
 var MIN_RECOMMENDED_WINDOW_HOURS_KEY = "skippy.recommended.minHours";
 
+// Mooring access - no access buffer hours around tides (0..3 in 0.5 steps)
+var MOORING_HIGH_NO_ACCESS_HOURS_KEY = "skippy.mooring.noAccess.highHours";
+var MOORING_LOW_NO_ACCESS_HOURS_KEY = "skippy.mooring.noAccess.lowHours";
+
 // ----------------------------
 // Small helpers
 // ----------------------------
@@ -37,6 +41,18 @@ function clampInt(n, a, b) {
   var x = Math.trunc(Number(n));
   if (!isFinite(x)) return a;
   return Math.max(a, Math.min(b, x));
+}
+
+function clampMooringHours(v) {
+  // Allowed: 0, 0.5, 1, 1.5, 2, 2.5, 3
+  var x = Number(v);
+  if (!isFinite(x)) return 0;
+  // Snap to nearest 0.5
+  var snapped = Math.round(x * 2) / 2;
+  if (snapped < 0) snapped = 0;
+  if (snapped > 3) snapped = 3;
+  // Keep exactly representable steps
+  return snapped;
 }
 
 // ----------------------------
@@ -127,6 +143,42 @@ function setMinRecommendedWindowHours(n) {
   } catch (e) {}
 }
 
+function getMooringHighNoAccessHours() {
+  var v = "";
+  try {
+    v = localStorage.getItem(MOORING_HIGH_NO_ACCESS_HOURS_KEY) || "";
+  } catch (e) {
+    v = "";
+  }
+  if (v === "") return 0;
+  return clampMooringHours(v);
+}
+
+function setMooringHighNoAccessHours(n) {
+  var v = clampMooringHours(n);
+  try {
+    localStorage.setItem(MOORING_HIGH_NO_ACCESS_HOURS_KEY, String(v));
+  } catch (e) {}
+}
+
+function getMooringLowNoAccessHours() {
+  var v = "";
+  try {
+    v = localStorage.getItem(MOORING_LOW_NO_ACCESS_HOURS_KEY) || "";
+  } catch (e) {
+    v = "";
+  }
+  if (v === "") return 0;
+  return clampMooringHours(v);
+}
+
+function setMooringLowNoAccessHours(n) {
+  var v = clampMooringHours(n);
+  try {
+    localStorage.setItem(MOORING_LOW_NO_ACCESS_HOURS_KEY, String(v));
+  } catch (e) {}
+}
+
 // ----------------------------
 // Segmented controls helpers
 // ----------------------------
@@ -197,6 +249,24 @@ function setupMinWindowHoursSelect() {
 }
 
 // ----------------------------
+// Mooring access selects
+// ----------------------------
+
+function setupMooringNoAccessSelect(selectId, getValue, setValue) {
+  var el = byId(selectId);
+  if (!el) return;
+
+  // initial
+  el.value = String(getValue());
+
+  // change
+  el.addEventListener("change", function () {
+    setValue(el.value);
+    el.value = String(getValue());
+  });
+}
+
+// ----------------------------
 // Boot
 // ----------------------------
 
@@ -208,6 +278,8 @@ document.addEventListener("DOMContentLoaded", function () {
   setupScoreTempToggle();
   setupScoreEnvironmentToggle();
   setupMinWindowHoursSelect();
+  setupMooringNoAccessSelect("mooringHighNoAccess", getMooringHighNoAccessHours, setMooringHighNoAccessHours);
+  setupMooringNoAccessSelect("mooringLowNoAccess", getMooringLowNoAccessHours, setMooringLowNoAccessHours);
 
   var homeBtn = byId("homeBtn");
   if (homeBtn) {
@@ -223,4 +295,3 @@ document.addEventListener("DOMContentLoaded", function () {
     });
   }
 });
-

@@ -14,6 +14,11 @@ const MIN_RECOMMENDED_WINDOW_HOURS_KEY = "skippy.recommended.minHours"; // int 1
 // Environment (shared with Settings)
 const SCORE_ENVIRONMENT_KEY = "skippy.score.environment"; // "coastal" | "estuary"
 
+// Mooring access - no access buffer hours around tides (0..3 in 0.5 steps)
+const MOORING_HIGH_NO_ACCESS_HOURS_KEY = "skippy.mooring.noAccess.highHours";
+const MOORING_LOW_NO_ACCESS_HOURS_KEY = "skippy.mooring.noAccess.lowHours";
+
+
 function getDateParam() {
   var p = new URLSearchParams(window.location.search);
   return p.get("date") || "";
@@ -82,6 +87,39 @@ function getMinRecommendedWindowHours() {
   if (!v) return 2;
   return clampInt(parseInt(v, 10), 1, 8);
 }
+
+function clampMooringHours(v) {
+  // Allowed: 0, 0.5, 1, 1.5, 2, 2.5, 3
+  var x = Number(v);
+  if (!isFinite(x)) return 0;
+  var snapped = Math.round(x * 2) / 2;
+  if (snapped < 0) snapped = 0;
+  if (snapped > 3) snapped = 3;
+  return snapped;
+}
+
+function getMooringHighNoAccessHours() {
+  var v = "";
+  try {
+    v = localStorage.getItem(MOORING_HIGH_NO_ACCESS_HOURS_KEY) || "";
+  } catch (e) {
+    v = "";
+  }
+  if (v === "") return 0;
+  return clampMooringHours(v);
+}
+
+function getMooringLowNoAccessHours() {
+  var v = "";
+  try {
+    v = localStorage.getItem(MOORING_LOW_NO_ACCESS_HOURS_KEY) || "";
+  } catch (e) {
+    v = "";
+  }
+  if (v === "") return 0;
+  return clampMooringHours(v);
+}
+
 
 /* ----------------------------
    Toggle (local-only; no persistence)
@@ -379,6 +417,123 @@ function renderRecommendedWindows(windowsEl, recommended) {
     windowsEl.removeChild(windowsEl.lastChild);
   }
 }
+
+/* ----------------------------
+   Mooring no-access windows (Settings + tides)
+---------------------------- */
+
+function minToHHMM24(mins) {
+  var m = Number(mins);
+  if (!isFinite(m)) return null;
+  if (m < 0) m = 0;
+  if (m > 1440) m = 1440;
+  if (m === 1440) return "24:00";
+  var mm = m % 60;
+  var hh = Math.floor(m / 60);
+  return String(hh).padStart(2, "0") + ":" + String(mm).padStart(2, "0");
+}
+
+function normalizeTideType(t) {
+  var s = String(t || "").toLowerCase();
+  if (s.indexOf("high") >= 0) return "High";
+  if (s.indexOf("low") >= 0) return "Low";
+  return "";
+}
+
+function computeMooringNoAccessWindows(tides, highHours, lowHours) {
+  var hiMin = Math.round(Number(highHours) * 60);
+  var loMin = Math.round(Number(lowHours) * 60);
+  if (!isFinite(hiMin)) hiMin = 0;
+  if (!isFinite(loMin)) loMin = 0;
+
+  var intervals = [];
+  (tides || []).forEach(function (t) {
+    var kind = normalizeTideType(t && t.type);
+    if (!kind) return;
+    var buf = kind === "High" ? hiMin : loMin;
+    if (!buf || buf <= 0) return;
+
+    var center = parseHHMMToMin(t && t.time);
+    if (center == null) return;
+
+    var start = Math.max(0, center - buf);
+    var end = Math.min(1440, center + buf);
+    if (end <= start) return;
+
+    intervals.push({ start: start, end: end, labels: { [kind]: true } });
+  });
+
+  if (!intervals.length) return [];
+
+  intervals.sort(function (a, b) {
+    if (a.start !== b.start) return a.start - b.start;
+    return a.end - b.end;
+  });
+
+  var merged = [];
+  var cur = intervals[0];
+
+  for (var i = 1; i < intervals.length; i++) {
+    var nxt = intervals[i];
+    if (nxt.start <= cur.end) {
+      cur.end = Math.max(cur.end, nxt.end);
+      for (var k in (nxt.labels || {})) cur.labels[k] = true;
+    } else {
+      merged.push(cur);
+      cur = nxt;
+    }
+  }
+  merged.push(cur);
+
+  return merged
+    .map(function (w) {
+      var labels = Object.keys(w.labels || {});
+      labels.sort();
+      return {
+        start: minToHHMM24(w.start),
+        end: minToHHMM24(w.end),
+        label: labels.join("/") || "",
+      };
+    })
+    .filter(function (w) {
+      return w.start && w.end;
+    });
+}
+
+function renderMooringNoAccessWindows(el, tides) {
+  if (!el) return;
+  el.innerHTML = "";
+
+  var highHours = getMooringHighNoAccessHours();
+  var lowHours = getMooringLowNoAccessHours();
+
+  var windows = computeMooringNoAccessWindows(tides || [], highHours, lowHours);
+
+  if (!windows.length) {
+    if ((highHours || 0) <= 0 && (lowHours || 0) <= 0) {
+      el.innerHTML = '<div class="muted small">No mooring no-access window (set buffers in Settings).</div>';
+    } else {
+      el.innerHTML = '<div class="muted small">No mooring no-access window for today.</div>';
+    }
+    return;
+  }
+
+  windows.forEach(function (w) {
+    var row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML =
+      '<div>' +
+        '<span class="pill poor">' +
+          formatWindowRange(w.start, w.end) +
+        '</span>' +
+      '</div>' +
+      '<div class="muted small">' +
+        (w.label ? ("(" + w.label + ")") : "") +
+      '</div>';
+    el.appendChild(row);
+  });
+}
+
 
 /* ----------------------------
    Summary card — badge on right, conditions on left
@@ -846,28 +1001,91 @@ function renderDay(data, loc) {
   // initial summary (will be overwritten by rerenderForMode)
   renderSummary(summaryData.score ?? 0, summaryData);
 
+  // Mooring settings (hours)
+  var highNoAccessHours = getMooringHighNoAccessHours();
+  var lowNoAccessHours = getMooringLowNoAccessHours();
+  var showNoAccessOnRight = (highNoAccessHours > 0) || (lowNoAccessHours > 0);
+
   var tides = document.getElementById("tides");
   if (tides) {
     tides.innerHTML = "";
+
     (data.tides || []).forEach(function (t) {
       var height =
         t.height_m != null && isFinite(Number(t.height_m))
           ? (String(Number(t.height_m).toFixed(1)).replace(/\.0$/, "") + " m")
           : "";
 
-      var row = document.createElement("div");
-      row.className = "row";
-      row.innerHTML =
+      // Build left column (existing)
+      var leftHtml =
         "<div><b>" +
         t.type +
         ' Tide</b> <span class="muted small">' +
         t.time +
-        "</span></div>" +
-        '<div class="muted small">' +
-        height +
-        "</div>";
+        "</span></div>";
+
+      // Build right column: default is just height (existing behaviour)
+      var rightHtml = '<div class="muted small">' + height + "</div>";
+
+      // If user has enabled buffers, replace right column with the no-access range (when applicable)
+      if (showNoAccessOnRight) {
+        var typeLower = String(t.type || "").toLowerCase();
+        var isHigh = typeLower.indexOf("high") >= 0;
+        var isLow = typeLower.indexOf("low") >= 0;
+
+        var bufHours = isHigh ? highNoAccessHours : (isLow ? lowNoAccessHours : 0);
+        var bufMin = Math.round(Number(bufHours) * 60);
+
+        if (bufMin > 0) {
+          var center = parseHHMMToMin(t.time);
+          if (center != null) {
+            var startMin = Math.max(0, center - bufMin);
+            var endMin = Math.min(1440, center + bufMin);
+
+            // Convert minutes back to HH:MM using existing window formatter helpers:
+            // formatWindowRange expects HH:MM strings, so we create them.
+            var startHHMM = String(Math.floor(startMin / 60)).padStart(2, "0") + ":" + String(startMin % 60).padStart(2, "0");
+            var endHHMM;
+            if (endMin === 1440) {
+              endHHMM = "24:00";
+            } else {
+              endHHMM = String(Math.floor(endMin / 60)).padStart(2, "0") + ":" + String(endMin % 60).padStart(2, "0");
+            }
+
+            rightHtml =
+              '<div class="muted small">' +
+                formatWindowRange(startHHMM, endHHMM) +
+                " (" + (isHigh ? "High" : "Low") + ")" +
+              "</div>";
+          } else {
+            // fallback if time parsing fails: keep height
+            rightHtml = '<div class="muted small">' + height + "</div>";
+          }
+        } else {
+          // buffer for this tide type is 0: keep height only
+          rightHtml = '<div class="muted small">' + height + "</div>";
+        }
+      }
+
+      var row = document.createElement("div");
+      row.className = "row";
+      row.innerHTML = leftHtml + rightHtml;
       tides.appendChild(row);
     });
+  }
+
+  // If both buffers are 0, ensure the standalone "noAccess" list (if present in HTML) shows nothing.
+  // (This prevents any “set buffers in Settings” message if you don’t want it.)
+  var noAccessEl = document.getElementById("noAccess");
+  if (noAccessEl) {
+    if (!showNoAccessOnRight) {
+      noAccessEl.innerHTML = "";
+    } else {
+      // If you *still* want the separate list elsewhere, keep this line.
+      // If you don't want it at all because we render on the right of tides, comment it out.
+      // renderMooringNoAccessWindows(noAccessEl, data.tides || []);
+      noAccessEl.innerHTML = "";
+    }
   }
 
   var windowsEl = document.getElementById("windows");
@@ -927,25 +1145,3 @@ function renderDay(data, loc) {
     rerenderForMode(mode);
   });
 }
-
-async function main() {
-  var loc = requireLocationOrRedirect();
-  if (!loc) return;
-
-  var dayIso = getDateParam();
-  if (!dayIso) {
-    var titleEl = document.getElementById("title");
-    if (titleEl) titleEl.textContent = "Missing date parameter";
-    return;
-  }
-
-  try {
-    var data = await getDayData(loc.slug, dayIso);
-    renderDay(data, loc);
-  } catch (e) {
-    var titleEl2 = document.getElementById("title");
-    if (titleEl2) titleEl2.textContent = "Error: " + e.message;
-  }
-}
-
-main();
