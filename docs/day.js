@@ -1145,3 +1145,26 @@ function renderDay(data, loc) {
     rerenderForMode(mode);
   });
 }
+
+async function main() {
+  var loc = requireLocationOrRedirect();
+  if (!loc) return;
+
+  var dayIso = getDateParam();
+  if (!dayIso) {
+    var titleEl = document.getElementById("title");
+    if (titleEl) titleEl.textContent = "Missing date parameter";
+    return;
+  }
+
+  try {
+    var data = await getDayData(loc.slug, dayIso);
+    renderDay(data, loc);
+  } catch (e) {
+    var titleEl2 = document.getElementById("title");
+    if (titleEl2) titleEl2.textContent = "Error: " + (e && e.message ? e.message : String(e));
+  }
+}
+
+main();
+
