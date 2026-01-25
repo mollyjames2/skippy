@@ -331,8 +331,9 @@ function renderRecommendedWindows(windowsEl, recommended) {
 /* ----------------------------
    Summary card (NEW) — badge on right, conditions on left
    - Computes MAX wind/gust/waves/period/temp within the LOCAL toggle window
-   - Displays temp as: ������ 10°C (feels like 7°C) + weather icon
-   - Uses the same badge classes as Today/Best Day: today-score-*
+   - Displays temp as: 10°C (feels like 7°C) + weather icon
+   - Visibility is MIN visibility within the toggle window
+   - Summary CARD is toned based on boating score (toggle-aware)
 ---------------------------- */
 
 /* SVG icons (copied from app.js, minimal set) */
@@ -370,7 +371,6 @@ function svgSunset() {
     "</svg>"
   );
 }
-
 
 function svgWind() {
   return svgIconWrap(
@@ -473,7 +473,12 @@ function toneClassForScore(score) {
   return "tone-avoid";
 }
 
-// Mode-sensitive maxima computed over *already filtered* hours (so no sunrise/sunset in summary rendering)
+// Mode-sensitive maxima computed over *already filtered* hours
+// - Wind: max wind + dir at max
+// - Gust: max gust
+// - Waves: max wave + period at max
+// - Temp: choose hour with max temp; pair feels_like
+// - Visibility: MIN visibility within window
 function summarizeForSummaryCardFromHours(filteredHours, summaryDataFallback) {
   var list = Array.isArray(filteredHours) ? filteredHours : [];
 
@@ -484,8 +489,8 @@ function summarizeForSummaryCardFromHours(filteredHours, summaryDataFallback) {
 
   var maxWave = null;
   var periodAtMaxWave = null;
-  
-  var maxVisibility = null;   
+
+  var minVisibility = null;
 
   // temp/feels: choose hour with max temp; pair feels_like from that hour
   var tempAtMaxTemp = null;
@@ -524,6 +529,11 @@ function summarizeForSummaryCardFromHours(filteredHours, summaryDataFallback) {
         feelsAtMaxTemp = isFinite(f) ? f : null;
       }
     }
+
+    var v = Number(h.visibility_km);
+    if (isFinite(v)) {
+      if (minVisibility == null || v < minVisibility) minVisibility = v;
+    }
   }
 
   var fallback = summaryDataFallback || {};
@@ -536,8 +546,8 @@ function summarizeForSummaryCardFromHours(filteredHours, summaryDataFallback) {
 
     wave_m_max: maxWave,
     wave_period_s_at_max: periodAtMaxWave,
-    
-    visibility_km_max: maxVisibility,
+
+    visibility_km_min: minVisibility,
 
     temp_c: tempAtMaxTemp,
     feels_like_c: feelsAtMaxTemp,
@@ -549,7 +559,20 @@ function summarizeForSummaryCardFromHours(filteredHours, summaryDataFallback) {
   if (out.temp_c == null && fallback.temp_c != null) out.temp_c = fallback.temp_c;
   if (out.feels_like_c == null && fallback.feels_like_c != null) out.feels_like_c = fallback.feels_like_c;
 
+  // Visibility fallback (if provided by summary)
+  if (out.visibility_km_min == null && fallback.visibility_km != null) {
+    var fv = Number(fallback.visibility_km);
+    out.visibility_km_min = isFinite(fv) ? fv : out.visibility_km_min;
+  }
+
   return out;
+}
+
+function applyToneToSummaryCard(summaryEl, toneClass) {
+  if (!summaryEl) return;
+  // Clear any previous tone class so toggling doesn't leave stale colours
+  summaryEl.classList.remove("tone-excellent", "tone-good", "tone-ok", "tone-poor", "tone-avoid");
+  if (toneClass) summaryEl.classList.add(toneClass);
 }
 
 function renderSummaryCard(dayScore, summaryData, mode, filteredHours) {
@@ -562,6 +585,9 @@ function renderSummaryCard(dayScore, summaryData, mode, filteredHours) {
   var ratingWord = scoreToWord(s);
   var toneClass = toneClassForScore(s);
 
+  // Tone the whole card like Today-at-a-glance (toggle-aware score)
+  applyToneToSummaryCard(summary, toneClass);
+
   var snap = summarizeForSummaryCardFromHours(filteredHours, summaryData);
 
   var windVal =
@@ -573,57 +599,57 @@ function renderSummaryCard(dayScore, summaryData, mode, filteredHours) {
 
   var waveVal = (snap.wave_m_max == null ? "—" : snap.wave_m_max) + " m";
   var periodVal = (snap.wave_period_s_at_max != null ? ("Period " + snap.wave_period_s_at_max + " s") : "");
-  
-  var visVal =
-    snap.visibility_km_max != null
-      ? snap.visibility_km_max + " km"
-      : "—";
-  
-  var visibilityLine =
-    '    <div class="small muted" style="margin-top:10px;">' +
-         svgVisibility() +
-         'Visibility&nbsp;&nbsp;<span style="font-weight:800; color:rgba(255,255,255,0.92);">' +
-         visVal +
-         "</span>" +
-    "    </div>";
 
   var tempVal = (snap.temp_c == null ? "—" : snap.temp_c) + "°C";
   var feelsVal = (snap.feels_like_c != null ? ("(feels like " + snap.feels_like_c + "°C)") : "");
 
-  // Note: we do NOT display sunrise/sunset here; those will go in a separate pill later.
-  // We also do not display the big temp headline in the summary; temp lives in the conditions list.
+  var visVal =
+    snap.visibility_km_min != null
+      ? snap.visibility_km_min + " km"
+      : "—";
+
+  // Build: title + conditions left, badge right
   summary.innerHTML =
     "" +
-    '<div style="display:flex; justify-content:space-between; gap:14px; align-items:stretch;">' +
+    '<div class="today-title">Day Summary</div>' +
 
-    // LEFT: conditions list (week-card style)
+    '<div style="display:flex; justify-content:space-between; gap:14px; align-items:stretch; margin-top:10px;">' +
+
+    // LEFT: conditions list
     '  <div style="min-width:0;">' +
 
-    '    <div class="small muted" style="margin-top:2px; font-weight:800;">Conditions</div>' +
+    // Temperature + icon (ABOVE visibility)
+    '    <div class="small muted" style="margin-top:2px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">' +
+           svgThermometer() +
+    '      <span style="font-weight:800; color:rgba(255,255,255,0.92);">' + tempVal + "</span>" +
+           (feelsVal ? (' <span class="muted small">' + feelsVal + "</span>") : "") +
+    '      <span style="display:inline-flex; align-items:center; opacity:0.95;">' + svgWeatherFromText(snap.condition) + "</span>" +
+    "    </div>" +
 
+    // Wind (gusts beneath)
     '    <div class="small muted" style="margin-top:10px;">' +
            svgWind() +
            'Max Wind&nbsp;&nbsp;<span style="font-weight:800; color:rgba(255,255,255,0.92);">' + windVal + "</span>" +
-           (gustVal ? (' <span class="muted small" style="margin-left:8px;">' + gustVal + "</span>") : "") +
     "    </div>" +
+    (gustVal
+      ? ('    <div class="muted small" style="margin-top:4px; margin-left:22px;">' + gustVal + "</div>")
+      : "") +
 
+    // Waves (period beneath)
     '    <div class="small muted" style="margin-top:10px;">' +
            svgWave() +
            'Max waves (at sea):&nbsp;&nbsp;<span style="font-weight:800; color:rgba(255,255,255,0.92);">' + waveVal + "</span>" +
-           (periodVal ? (' <span class="muted small" style="margin-left:8px;">' + periodVal + "</span>") : "") +
     "    </div>" +
+    (periodVal
+      ? ('    <div class="muted small" style="margin-top:4px; margin-left:22px;">' + periodVal + "</div>")
+      : "") +
+
+    // Visibility (MIN within toggle window)
     '    <div class="small muted" style="margin-top:10px;">' +
            svgVisibility() +
            'Visibility&nbsp;&nbsp;<span style="font-weight:800; color:rgba(255,255,255,0.92);">' +
            visVal +
            "</span>" +
-    "    </div>"; +
-
-    '    <div class="small muted" style="margin-top:10px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">' +
-           svgThermometer() +
-    '      <span style="font-weight:800; color:rgba(255,255,255,0.92);">' + tempVal + "</span>" +
-           (feelsVal ? (' <span class="muted small">' + feelsVal + "</span>") : "") +
-    '      <span style="display:inline-flex; align-items:center; opacity:0.95;">' + svgWeatherFromText(snap.condition) + "</span>" +
     "    </div>" +
 
     "  </div>" +
@@ -649,13 +675,7 @@ function renderSunPill(mode, rawSunriseHHMM, rawSunsetHHMM) {
   var sr = rawSunriseHHMM || "—";
   var ss = rawSunsetHHMM || "—";
 
-  // In daylight mode, show the *actual filter window* (rounded) as a subtle note
-  var adj = adjustedSunWindowForMode(mode, rawSunriseHHMM, rawSunsetHHMM);
-  var filterNote = "";
-  if (mode === "daylight" && adj && adj.sunriseHHMM && adj.sunsetHHMM) {
-    filterNote = "Filter " + adj.sunriseHHMM + "–" + adj.sunsetHHMM;
-  }
-
+  // Requirement: no filter text / no "All hours" text in this box
   el.innerHTML =
     "" +
     '<div class="row" style="align-items:center;">' +
@@ -671,14 +691,6 @@ function renderSunPill(mode, rawSunriseHHMM, rawSunsetHHMM) {
     '        <span style="font-weight:800; color:rgba(255,255,255,0.92);">Sunset ' + ss + "</span>" +
     "      </span>" +
     "    </div>" +
-    "  </div>" +
-
-    // Right-side mode hint (keeps the card feeling “alive” without adding a toggle here)
-    '  <div style="text-align:right; white-space:nowrap;">' +
-    '    <div class="muted small">' + (mode === "daylight" ? "Daylight" : "All hours") + "</div>" +
-    (filterNote
-      ? ('<div class="muted small" style="margin-top:4px;">' + filterNote + "</div>")
-      : "") +
     "  </div>" +
     "</div>";
 }
@@ -731,8 +743,6 @@ function renderDay(data, loc) {
   // initial summary (will be overwritten by rerenderForMode)
   renderSummary(summaryData.score ?? 0, summaryData);
 
-
-
   var tides = document.getElementById("tides");
   if (tides) {
     tides.innerHTML = "";
@@ -764,18 +774,18 @@ function renderDay(data, loc) {
   var rawSunsetHHMM = tilesData.sunset;
 
   function rerenderForMode(mode) {
-    // 0) Filtered hours (single source of truth for mode-specific "max" calculations)
+    // 0) Filtered hours (single source of truth for mode-specific summary calculations)
     var filteredHours = filterHours(mode, data.hours || [], rawSunriseHHMM, rawSunsetHHMM);
-    
-    renderSunPill(mode, rawSunriseHHMM, rawSunsetHHMM);
 
+    // Daylight card (no mode/filter text in UI)
+    renderSunPill(mode, rawSunriseHHMM, rawSunsetHHMM);
 
     // 1) Hourly list (still uses sunrise/sunset because it handles filtering internally)
     if (hoursEl) {
       renderHourlyTable(hoursEl, mode, data.hours || [], rawSunriseHHMM, rawSunsetHHMM);
     }
 
-    // 2) Daily boating score (recomputed)
+    // 2) Daily boating score (recomputed; must be toggle-aware)
     var dailyScoreMode = (mode === "daylight") ? "daylight" : "allhours";
     var adj = adjustedSunWindowForMode(mode, rawSunriseHHMM, rawSunsetHHMM);
 
@@ -788,7 +798,7 @@ function renderDay(data, loc) {
       environment: getScoreEnvironment(),
     });
 
-    // NEW summary card (badge + conditions)
+    // NEW summary card (badge + conditions) — card tone based on the computed score
     renderSummaryCard(dayScore, summaryData, mode, filteredHours);
 
     // 3) Recommended windows tier list (recomputed)
