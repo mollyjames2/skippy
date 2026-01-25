@@ -383,17 +383,25 @@ h2 { font-size: 16px; }
 }
 
 /* -----------------------------
-   Hourly columns
+   Hourly columns (mini-card look)
 ----------------------------- */
 
 .hourly-header {
   display: grid;
-  grid-template-columns: 56px 56px 28px 1fr 1fr 68px;
+  /* Time | Cond | Temp | Wind | Waves | Vis | Score */
+  grid-template-columns: 56px 40px 1.1fr 1.35fr 1.25fr 0.9fr 68px;
   gap: 8px;
   align-items: center;
   padding: 0 2px;
   font-size: 12px;
   color: rgba(232, 238, 247, 0.7);
+}
+
+.hourly-row {
+  display: grid;
+  grid-template-columns: 56px 40px 1.1fr 1.35fr 1.25fr 0.9fr 68px;
+  gap: 8px;
+  align-items: center;
 }
 
 .hourly-item {
@@ -403,11 +411,9 @@ h2 { font-size: 16px; }
   padding: 10px 10px;
 }
 
-.hourly-row {
-  display: grid;
-  grid-template-columns: 56px 56px 28px 1fr 1fr 68px;
-  gap: 8px;
-  align-items: center;
+.hourly-time b {
+  font-size: 18px;
+  letter-spacing: 0.2px;
 }
 
 .hourly-cond {
@@ -417,18 +423,48 @@ h2 { font-size: 16px; }
   opacity: 0.9;
 }
 
-.hourly-wind .main,
-.hourly-waves .main {
+/* one-line metrics */
+.hourly-metric .val {
   font-weight: 800;
-  font-size: 12px;
+  font-size: 13px;
+  color: rgba(255, 255, 255, 0.92);
+  white-space: nowrap;
 }
 
-.hourly-wind .sub,
-.hourly-waves .sub { margin-top: 2px; }
+.bracket {
+  font-size: 0.85em;       /* slightly smaller */
+  opacity: 0.75;
+  font-weight: 600;
+  white-space: nowrap;
+}
 
-.hourly-score .pill { display: inline-block; }
+.hourly-windcell .dir {
+  font-weight: 800;
+  font-size: 12px;
+  opacity: 0.9;
+  margin-left: 6px;
+  white-space: nowrap;
+}
 
+.hourly-vis {
+  white-space: nowrap;
+}
+
+/* Score badge consistent size; still coloured via pillClass(...) */
+.hourly-score-badge {
+  display: inline-flex !important;
+  width: 42px;
+  height: 42px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  font-weight: 900;
+  padding: 0 !important;
+}
+
+/* Keep your extras line */
 .hourly-extras { margin-top: 6px; }
+
 
 /* -----------------------------
    Score-toned cards

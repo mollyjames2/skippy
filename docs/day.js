@@ -184,7 +184,6 @@ function filterHours(mode, hours, sunriseHHMM, sunsetHHMM) {
     return tMin >= startMin && tMin < endMin;
   });
 }
-
 function renderHourlyTable(hoursEl, mode, hours, sunrise, sunset) {
   hoursEl.innerHTML = "";
 
@@ -195,10 +194,11 @@ function renderHourlyTable(hoursEl, mode, hours, sunrise, sunset) {
   head.className = "hourly-header";
   head.innerHTML =
     '<div class="hcell">Time</div>' +
-    '<div class="hcell">Temp</div>' +
-    '<div class="hcell"></div>' +
-    '<div class="hcell">Wind</div>' +
-    '<div class="hcell">Waves</div>' +
+    '<div class="hcell">Conditions</div>' +
+    '<div class="hcell">Temp <span class="bracket">(feels like)</span></div>' +
+    '<div class="hcell">Wind <span class="bracket">(Gusts)</span></div>' +
+    '<div class="hcell">Waves at sea <span class="bracket">(Period)</span></div>' +
+    '<div class="hcell">Visibility</div>' +
     '<div class="hcell" style="text-align:right;">Score</div>';
   hoursEl.appendChild(head);
 
@@ -209,38 +209,67 @@ function renderHourlyTable(hoursEl, mode, hours, sunrise, sunset) {
     var icon = conditionToIcon(h.condition);
     var score = (h.score ?? 0);
 
-    var windMain = (h.wind_kts ?? 0) + " kts " + (h.wind_dir || "-");
-    var windSub = (h.gust_kts != null && h.gust_kts > 0) ? ("G " + h.gust_kts) : "";
+    // Temp + feels like
+    var tempMain = (h.temp_c != null ? h.temp_c : "—") + "°C";
+    var feelsVal = (h.feels_like_c != null ? h.feels_like_c : "—") + "°C";
 
-    var waveMain = (h.wave_m ?? 0) + " m";
-    var waveSub = (h.wave_period_s != null && h.wave_period_s > 0) ? (h.wave_period_s + " s") : "";
+    // Wind + gusts + direction + arrow
+    var windKts = (h.wind_kts != null ? h.wind_kts : "—");
+    var gustKts = (h.gust_kts != null ? h.gust_kts : "—");
+    var dir = (h.wind_dir || "");
+    var windArrowDeg = windArrowDegFromCompass(dir);
+
+    // Waves + period
+    var waveM = (h.wave_m != null ? h.wave_m : "—");
+    var periodS = (h.wave_period_s != null ? h.wave_period_s : "—");
+
+    // Visibility
+    var visKm = (h.visibility_km != null ? h.visibility_km : "—");
 
     var row = document.createElement("div");
     row.className = "hourly-row";
+
     row.innerHTML =
+      // Time
       '<div class="hourly-time"><b>' + h.time + "</b></div>" +
-      '<div class="hourly-temp muted">' + (h.temp_c ?? "—") + "\u00b0</div>" +
+
+      // Conditions icon
       '<div class="hourly-cond" title="' + (h.condition || "") + '">' + icon + "</div>" +
 
-      '<div class="hourly-wind">' +
-      '  <div class="main">' + windMain + "</div>" +
-      '  <div class="sub muted small">' + windSub + "</div>" +
+      // Temp (feels like)
+      '<div class="hourly-metric">' +
+      '  <span class="val">' + tempMain + "</span> " +
+      '  <span class="bracket">(' + feelsVal + ")</span>" +
       "</div>" +
 
-      '<div class="hourly-waves">' +
-      '  <div class="main">' + waveMain + "</div>" +
-      '  <div class="sub muted small">' + waveSub + "</div>" +
+      // Wind (gusts) + dir + arrow
+      '<div class="hourly-metric hourly-windcell">' +
+      '  <span class="val">' + windKts + " kts</span> " +
+      '  <span class="bracket">(' + gustKts + " kts)</span>" +
+      (dir ? (' <span class="dir">' + dir + "</span>") : "") +
+      (windArrowDeg != null ? svgArrowRotated(windArrowDeg) : "") +
       "</div>" +
 
+      // Waves (period)
+      '<div class="hourly-metric">' +
+      '  <span class="val">' + waveM + " m</span> " +
+      '  <span class="bracket">(' + periodS + " s)</span>" +
+      "</div>" +
+
+      // Visibility
+      '<div class="hourly-vis"><span class="val">' + visKm + " km</span></div>" +
+
+      // Score badge (consistent sizing, still coloured by pillClass)
       '<div class="hourly-score" style="text-align:right;">' +
-      '  <span class="' + pillClass(score) + '">' + score + "</span>" +
+      '  <span class="' + pillClass(score) + ' hourly-score-badge">' + score + "</span>" +
       "</div>";
 
     item.appendChild(row);
 
+    // Optional extras row (keep precip here if you still want it)
     var extrasBits = [];
     if (h.precip_mm != null && h.precip_mm > 0) extrasBits.push("Precip " + h.precip_mm + " mm");
-    if (h.visibility_km != null) extrasBits.push("Vis " + h.visibility_km + " km");
+    // Visibility is now a column, so don't repeat it here.
 
     if (extrasBits.length > 0) {
       var extras = document.createElement("div");
@@ -252,6 +281,7 @@ function renderHourlyTable(hoursEl, mode, hours, sunrise, sunset) {
     hoursEl.appendChild(item);
   });
 }
+
 
 /* ----------------------------
    Wind arrow helpers (matches app.js behaviour)
