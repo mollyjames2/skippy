@@ -869,14 +869,25 @@ function renderWeek(data, loc) {
       return (w === "POOR" || w === "AVOID");
     });
 
+    var bestTitleHtml =
+      '<div class="today-title">Best day this week</div>' +
+      '<div class="spacer"></div>';
+
     if (allAvoid) {
-      setHtml("bestCard", '<div class="best-week-message">Honestly, just stay home!</div>');
-      forceToneClass(bestEl, "tone-avoid");
-      // no click
+      setHtml(
+      "bestCard",
+      bestTitleHtml +
+        '<div class="best-week-message">Honestly, just stay home!</div>'
+    );
+    forceToneClass(bestEl, "tone-avoid");
     } else if (allPoorOrAvoid) {
-      setHtml("bestCard", '<div class="best-week-message">I wouldn’t bother…</div>');
-      forceToneClass(bestEl, "tone-poor");
-      // no click
+      setHtml(
+      "bestCard",
+      bestTitleHtml +
+       '<div class="best-week-message">I wouldn\'t bother!</div>'
+    );
+    forceToneClass(bestEl, "tone-poor");
+
     } else {
       // Find best day from the actual week days (so we have a date for navigation)
       var bestDay = daysArr.reduce(function (acc, d) {
