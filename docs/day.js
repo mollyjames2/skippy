@@ -253,6 +253,42 @@ function renderHourlyTable(hoursEl, mode, hours, sunrise, sunset) {
   });
 }
 
+function compassToDeg(compass) {
+  var c = String(compass || "").toUpperCase().trim();
+  var map = {
+    N: 0, NNE: 22.5, NE: 45, ENE: 67.5,
+    E: 90, ESE: 112.5, SE: 135, SSE: 157.5,
+    S: 180, SSW: 202.5, SW: 225, WSW: 247.5,
+    W: 270, WNW: 292.5, NW: 315, NNW: 337.5,
+  };
+  return (map[c] != null) ? map[c] : null;
+}
+
+// Open-Meteo wind direction is "coming from".
+// Arrow should show where it is travelling (to) => +180.
+function windArrowDegFromCompass(compass) {
+  var from = compassToDeg(compass);
+  if (from == null) return null;
+  return (from + 180) % 360;
+}
+
+function svgArrowRotated(compassDeg) {
+  if (compassDeg == null || !isFinite(Number(compassDeg))) return "";
+
+  // Convert compass degrees (0=N) to CSS rotation (0=E)
+  var cssDeg = (Number(compassDeg) - 90 + 360) % 360;
+
+  return (
+    '<span style="display:inline-flex; align-items:center; margin:0 6px; ' +
+      'transform:rotate(' + cssDeg + 'deg); transform-origin:50% 50%;">' +
+      '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">' +
+        '<path d="M4 12h14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+        '<path d="M14 6l6 6-6 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '</svg>' +
+    '</span>'
+  );
+}
+
 /* ----------------------------
    Recommended windows rendering (unchanged)
 ---------------------------- */
@@ -594,6 +630,8 @@ function renderSummaryCard(dayScore, summaryData, mode, filteredHours) {
     (snap.wind_kts_max == null ? "—" : snap.wind_kts_max) +
     " kts" +
     (snap.wind_dir_at_max ? " " + snap.wind_dir_at_max : "");
+  var windArrowDeg = windArrowDegFromCompass(snap.wind_dir_at_max);
+
 
   var gustVal = (snap.gust_kts_max != null ? ("Gusts " + snap.gust_kts_max + " kts") : "");
 
@@ -618,18 +656,12 @@ function renderSummaryCard(dayScore, summaryData, mode, filteredHours) {
     // LEFT: conditions list
     '  <div style="min-width:0;">' +
 
-    // Temperature + icon (ABOVE visibility)
-    '    <div class="small muted" style="margin-top:2px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">' +
-           svgThermometer() +
-    '      <span style="font-weight:800; color:rgba(255,255,255,0.92);">' + tempVal + "</span>" +
-           (feelsVal ? (' <span class="muted small">' + feelsVal + "</span>") : "") +
-    '      <span style="display:inline-flex; align-items:center; opacity:0.95;">' + svgWeatherFromText(snap.condition) + "</span>" +
-    "    </div>" +
 
     // Wind (gusts beneath)
     '    <div class="small muted" style="margin-top:10px;">' +
            svgWind() +
-           'Max Wind&nbsp;&nbsp;<span style="font-weight:800; color:rgba(255,255,255,0.92);">' + windVal + "</span>" +
+           'Max Wind&nbsp;&nbsp;<span style="font-weight:800; color:rgba(255,255,255,0.92);">' + windVal + "</span>" + 
+       svgArrowRotated(windArrowDeg) +
     "    </div>" +
     (gustVal
       ? ('    <div class="muted small" style="margin-top:4px; margin-left:22px;">' + gustVal + "</div>")
@@ -653,6 +685,21 @@ function renderSummaryCard(dayScore, summaryData, mode, filteredHours) {
     "    </div>" +
 
     "  </div>" +
+    
+    // Temperature + icon 
+    '    <div class="small muted" style="margin-top:2px; display:flex; align-items:center; gap:8px; flex-wrap:nowrap;">' +
+           svgThermometer() +
+    '      <span style="display:inline-flex; align-items:baseline; gap:8px; min-width:0; white-space:nowrap;">' +
+    '        <span style="font-weight:800; color:rgba(255,255,255,0.92);">' + tempVal + '</span>' +
+             (feelsVal
+               ? ('<span class="muted" style="font-size:12px; white-space:nowrap;">' + feelsVal + '</span>')
+               : '') +
+    '      </span>' +
+    '      <span style="display:inline-flex; align-items:center; opacity:0.95; margin-left:6px;">' +
+             svgWeatherFromText(snap.condition) +
+    '      </span>' +
+    '    </div>' +
+
 
     // RIGHT: badge stack (same classes as Today/Best Day)
     '  <div class="today-score-wrap" style="min-width:120px;">' +
@@ -678,22 +725,21 @@ function renderSunPill(mode, rawSunriseHHMM, rawSunsetHHMM) {
   // Requirement: no filter text / no "All hours" text in this box
   el.innerHTML =
     "" +
-    '<div class="row" style="align-items:center;">' +
-    '  <div style="min-width:0;">' +
-    '    <div class="small muted" style="font-weight:800;">Daylight</div>' +
-    '    <div class="small muted" style="margin-top:8px; display:flex; gap:14px; align-items:center; flex-wrap:wrap;">' +
-    '      <span style="display:inline-flex; align-items:center;">' +
-             svgSunrise() +
-    '        <span style="font-weight:800; color:rgba(255,255,255,0.92);">Sunrise ' + sr + "</span>" +
-    "      </span>" +
-    '      <span style="display:inline-flex; align-items:center;">' +
-             svgSunset() +
-    '        <span style="font-weight:800; color:rgba(255,255,255,0.92);">Sunset ' + ss + "</span>" +
-    "      </span>" +
-    "    </div>" +
+    '<div>' +
+    '  <h2>Daylight</h2>' +
+    '  <div class="spacer"></div>' +
+    '  <div class="small muted" style="display:flex; justify-content:center; gap:22px; align-items:center; flex-wrap:wrap;">' +
+    '    <span style="display:inline-flex; align-items:center; gap:6px;">' +
+           svgSunrise() +
+    '      <span style="font-weight:800; color:rgba(255,255,255,0.92);">Sunrise ' + sr + "</span>" +
+    "    </span>" +
+    '    <span style="display:inline-flex; align-items:center; gap:6px;">' +
+           svgSunset() +
+    '      <span style="font-weight:800; color:rgba(255,255,255,0.92);">Sunset ' + ss + "</span>" +
+    "    </span>" +
     "  </div>" +
     "</div>";
-}
+
 
 /* ----------------------------
    Legacy summary renderer (kept to avoid removing functionality)
