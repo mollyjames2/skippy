@@ -1009,7 +1009,7 @@ function renderWeek(data, loc) {
       // RIGHT: vertically centered pill
       '  <div style="display:flex; align-items:center; justify-content:flex-end;">' +
       '    <div class="' + pillClass(score) + '" style="padding:10px 16px; border-radius:999px; font-weight:900; font-size:18px; line-height:1; white-space:nowrap;">' +
-             rating + " (" + score + ")" +
+             rating +
       '    </div>' +
       '  </div>' +
     
