@@ -329,7 +329,267 @@ function renderRecommendedWindows(windowsEl, recommended) {
 }
 
 /* ----------------------------
-   Summary rerender
+   Summary card (NEW) â€” badge on right, conditions on left
+   - Computes MAX wind/gust/waves/period/temp within the LOCAL toggle window
+   - Displays temp as: í ¼í¼¡ 10Â°C (feels like 7Â°C) + weather icon
+   - Uses the same badge classes as Today/Best Day: today-score-*
+---------------------------- */
+
+/* SVG icons (copied from app.js, minimal set) */
+function svgIconWrap(svg) {
+  return '<span style="display:inline-flex; align-items:center; line-height:1; margin-right:6px;">' + svg + "</span>";
+}
+
+function svgWind() {
+  return svgIconWrap(
+    '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">' +
+      '<path d="M3 8h10a2 2 0 1 0-2-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+      '<path d="M3 12h14a2 2 0 1 1-2 2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+      '<path d="M3 16h7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+    "</svg>"
+  );
+}
+
+function svgWave() {
+  return svgIconWrap(
+    '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">' +
+      '<path d="M2 14c2-2 4-2 6 0s4 2 6 0 4-2 6 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+    "</svg>"
+  );
+}
+
+function svgThermometer() {
+  return svgIconWrap(
+    '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">' +
+      '<path d="M10 14.5V5a2 2 0 1 1 4 0v9.5a4 4 0 1 1-4 0z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<path d="M12 17a1.5 1.5 0 1 0 0 .01" fill="currentColor"/>' +
+    "</svg>"
+  );
+}
+
+function svgWeatherFromText(conditionText) {
+  var c = String(conditionText || "").toLowerCase();
+
+  if (c.includes("clear")) {
+    return svgIconWrap(
+      '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">' +
+        '<circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/>' +
+        '<path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M19.8 4.2l-2.1 2.1M6.3 17.7l-2.1 2.1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+      "</svg>"
+    );
+  }
+
+  if (c.includes("fog")) {
+    return svgIconWrap(
+      '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">' +
+        '<path d="M4 10h16M6 14h14M5 18h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+      "</svg>"
+    );
+  }
+
+  if (c.includes("thunder")) {
+    return svgIconWrap(
+      '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">' +
+        '<path d="M6 14h11a4 4 0 0 0 0-8 5 5 0 0 0-9-2" fill="none" stroke="currentColor" stroke-width="2"/>' +
+        '<path d="M12 12l-3 6h3l-1 4 5-8h-3l1-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>' +
+      "</svg>"
+    );
+  }
+
+  if (c.includes("snow")) {
+    return svgIconWrap(
+      '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">' +
+        '<path d="M6 14h11a4 4 0 0 0 0-8 5 5 0 0 0-9-2" fill="none" stroke="currentColor" stroke-width="2"/>' +
+        '<path d="M9 18h0M12 18h0M15 18h0" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>' +
+      "</svg>"
+    );
+  }
+
+  if (c.includes("showers") || c.includes("drizzle") || c.includes("rain")) {
+    return svgIconWrap(
+      '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">' +
+        '<path d="M6 14h11a4 4 0 0 0 0-8 5 5 0 0 0-9-2" fill="none" stroke="currentColor" stroke-width="2"/>' +
+        '<path d="M8 17v3M12 17v3M16 17v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+      "</svg>"
+    );
+  }
+
+  return svgIconWrap(
+    '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">' +
+      '<path d="M6 16h12a4 4 0 0 0 0-8 5 5 0 0 0-9-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+    "</svg>"
+  );
+}
+
+function scoreToWord(score) {
+  var s = Number(score);
+  if (!isFinite(s)) return "-";
+  if (s >= 90) return "EXCELLENT";
+  if (s >= 60) return "GOOD";
+  if (s >= 40) return "OK";
+  if (s >= 20) return "POOR";
+  return "AVOID";
+}
+
+function toneClassForScore(score) {
+  var s = Number(score);
+  if (!isFinite(s)) return "";
+  if (s >= 90) return "tone-excellent";
+  if (s >= 60) return "tone-good";
+  if (s >= 40) return "tone-ok";
+  if (s >= 20) return "tone-poor";
+  return "tone-avoid";
+}
+
+// Mode-sensitive maxima computed over *already filtered* hours (so no sunrise/sunset in summary rendering)
+function summarizeForSummaryCardFromHours(filteredHours, summaryDataFallback) {
+  var list = Array.isArray(filteredHours) ? filteredHours : [];
+
+  var maxWind = null;
+  var windDirAtMax = null;
+
+  var maxGust = null;
+
+  var maxWave = null;
+  var periodAtMaxWave = null;
+
+  // temp/feels: choose hour with max temp; pair feels_like from that hour
+  var tempAtMaxTemp = null;
+  var feelsAtMaxTemp = null;
+
+  for (var i = 0; i < list.length; i++) {
+    var h = list[i] || {};
+
+    var w = Number(h.wind_kts);
+    if (isFinite(w)) {
+      if (maxWind == null || w > maxWind) {
+        maxWind = w;
+        windDirAtMax = h.wind_dir || windDirAtMax;
+      }
+    }
+
+    var g = Number(h.gust_kts);
+    if (isFinite(g)) {
+      if (maxGust == null || g > maxGust) maxGust = g;
+    }
+
+    var wave = Number(h.wave_m);
+    if (isFinite(wave)) {
+      if (maxWave == null || wave > maxWave) {
+        maxWave = wave;
+        var p = Number(h.wave_period_s);
+        periodAtMaxWave = isFinite(p) ? p : null;
+      }
+    }
+
+    var t = Number(h.temp_c);
+    if (isFinite(t)) {
+      if (tempAtMaxTemp == null || t > tempAtMaxTemp) {
+        tempAtMaxTemp = t;
+        var f = Number(h.feels_like_c);
+        feelsAtMaxTemp = isFinite(f) ? f : null;
+      }
+    }
+  }
+
+  var fallback = summaryDataFallback || {};
+
+  // Fallbacks so the UI never goes blank if hours are missing
+  var out = {
+    wind_kts_max: maxWind,
+    wind_dir_at_max: windDirAtMax,
+    gust_kts_max: maxGust,
+
+    wave_m_max: maxWave,
+    wave_period_s_at_max: periodAtMaxWave,
+
+    temp_c: tempAtMaxTemp,
+    feels_like_c: feelsAtMaxTemp,
+
+    condition: (fallback.condition ?? "â€”"),
+  };
+
+  // If temp/feels weren't present in hours, try summary fallback
+  if (out.temp_c == null && fallback.temp_c != null) out.temp_c = fallback.temp_c;
+  if (out.feels_like_c == null && fallback.feels_like_c != null) out.feels_like_c = fallback.feels_like_c;
+
+  return out;
+}
+
+function renderSummaryCard(dayScore, summaryData, mode, filteredHours) {
+  var summary = document.getElementById("summary");
+  if (!summary) return;
+
+  var s = Number(dayScore);
+  if (!isFinite(s)) s = 0;
+
+  var ratingWord = scoreToWord(s);
+  var toneClass = toneClassForScore(s);
+
+  var snap = summarizeForSummaryCardFromHours(filteredHours, summaryData);
+
+  var windVal =
+    (snap.wind_kts_max == null ? "â€”" : snap.wind_kts_max) +
+    " kts" +
+    (snap.wind_dir_at_max ? " " + snap.wind_dir_at_max : "");
+
+  var gustVal = (snap.gust_kts_max != null ? ("Gusts " + snap.gust_kts_max + " kts") : "");
+
+  var waveVal = (snap.wave_m_max == null ? "â€”" : snap.wave_m_max) + " m";
+  var periodVal = (snap.wave_period_s_at_max != null ? ("Period " + snap.wave_period_s_at_max + " s") : "");
+
+  var tempVal = (snap.temp_c == null ? "â€”" : snap.temp_c) + "Â°C";
+  var feelsVal = (snap.feels_like_c != null ? ("(feels like " + snap.feels_like_c + "Â°C)") : "");
+
+  // Note: we do NOT display sunrise/sunset here; those will go in a separate pill later.
+  // We also do not display the big temp headline in the summary; temp lives in the conditions list.
+  summary.innerHTML =
+    "" +
+    '<div style="display:flex; justify-content:space-between; gap:14px; align-items:stretch;">' +
+
+    // LEFT: conditions list (week-card style)
+    '  <div style="min-width:0;">' +
+
+    '    <div class="small muted" style="margin-top:2px; font-weight:800;">Conditions</div>' +
+
+    '    <div class="small muted" style="margin-top:10px;">' +
+           svgWind() +
+           'Max Wind&nbsp;&nbsp;<span style="font-weight:800; color:rgba(255,255,255,0.92);">' + windVal + "</span>" +
+           (gustVal ? (' <span class="muted small" style="margin-left:8px;">' + gustVal + "</span>") : "") +
+    "    </div>" +
+
+    '    <div class="small muted" style="margin-top:10px;">' +
+           svgWave() +
+           'Max waves (at sea):&nbsp;&nbsp;<span style="font-weight:800; color:rgba(255,255,255,0.92);">' + waveVal + "</span>" +
+           (periodVal ? (' <span class="muted small" style="margin-left:8px;">' + periodVal + "</span>") : "") +
+    "    </div>" +
+
+    '    <div class="small muted" style="margin-top:10px; display:flex; align-items:center; gap:8px; flex-wrap:wrap;">' +
+           svgThermometer() +
+    '      <span style="font-weight:800; color:rgba(255,255,255,0.92);">' + tempVal + "</span>" +
+           (feelsVal ? (' <span class="muted small">' + feelsVal + "</span>") : "") +
+    '      <span style="display:inline-flex; align-items:center; opacity:0.95;">' + svgWeatherFromText(snap.condition) + "</span>" +
+    "    </div>" +
+
+    "  </div>" +
+
+    // RIGHT: badge stack (same classes as Today/Best Day)
+    '  <div class="today-score-wrap" style="min-width:120px;">' +
+    '    <div class="today-score-stack">' +
+    '      <div class="today-score-label">Boating score</div>' +
+    '      <div class="today-score-word">' + ratingWord + "</div>" +
+    '      <div class="today-score-circle ' + toneClass + '">' +
+    '        <div class="today-score-num">' + Math.round(s) + "</div>" +
+    "      </div>" +
+    "    </div>" +
+    "  </div>" +
+
+    "</div>";
+}
+
+/* ----------------------------
+   Legacy summary renderer (kept to avoid removing functionality)
+   (No longer used once rerenderForMode runs, but retained.)
 ---------------------------- */
 
 function renderSummary(score, summaryData) {
@@ -375,6 +635,7 @@ function renderDay(data, loc) {
   // initial summary (will be overwritten by rerenderForMode)
   renderSummary(summaryData.score ?? 0, summaryData);
 
+  // KEEP tiles rendering for now (no functionality removed)
   var tiles = document.getElementById("tiles");
   if (tiles) {
     var windKts = (tilesData.wind_kts ?? 0);
@@ -429,7 +690,10 @@ function renderDay(data, loc) {
   var rawSunsetHHMM = tilesData.sunset;
 
   function rerenderForMode(mode) {
-    // 1) Hourly list
+    // 0) Filtered hours (single source of truth for mode-specific "max" calculations)
+    var filteredHours = filterHours(mode, data.hours || [], rawSunriseHHMM, rawSunsetHHMM);
+
+    // 1) Hourly list (still uses sunrise/sunset because it handles filtering internally)
     if (hoursEl) {
       renderHourlyTable(hoursEl, mode, data.hours || [], rawSunriseHHMM, rawSunsetHHMM);
     }
@@ -438,7 +702,6 @@ function renderDay(data, loc) {
     var dailyScoreMode = (mode === "daylight") ? "daylight" : "allhours";
     var adj = adjustedSunWindowForMode(mode, rawSunriseHHMM, rawSunsetHHMM);
 
-    // scoreDayFromHourRows now supports hour rows with `time: "HH:MM"` directly (no adapter needed).
     var dayScore = scoreDayFromHourRows({
       dailyScoreMode: dailyScoreMode,
       hourRows: data.hours || [],
@@ -448,7 +711,8 @@ function renderDay(data, loc) {
       environment: getScoreEnvironment(),
     });
 
-    renderSummary(dayScore, summaryData);
+    // NEW summary card (badge + conditions)
+    renderSummaryCard(dayScore, summaryData, mode, filteredHours);
 
     // 3) Recommended windows tier list (recomputed)
     var windowsByTier = windowsByTierFromHourRows({
@@ -495,4 +759,3 @@ async function main() {
 }
 
 main();
-
