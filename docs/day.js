@@ -493,6 +493,70 @@ function svgWeatherFromText(conditionText) {
   );
 }
 
+function svgWeatherTitleFromText(conditionText) {
+  var c = String(conditionText || "").toLowerCase();
+
+  function wrap(svg) {
+    return (
+      '<span style="display:inline-flex; align-items:center; margin-left:10px; opacity:0.95;">' +
+      svg +
+      "</span>"
+    );
+  }
+
+  // Same icons as svgWeatherFromText, just bigger (title size)
+  if (c.includes("clear")) {
+    return wrap(
+      '<svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" focusable="false">' +
+        '<circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="2"/>' +
+        '<path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M19.8 4.2l-2.1 2.1M6.3 17.7l-2.1 2.1" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+      "</svg>"
+    );
+  }
+
+  if (c.includes("fog")) {
+    return wrap(
+      '<svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" focusable="false">' +
+        '<path d="M4 10h16M6 14h14M5 18h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+      "</svg>"
+    );
+  }
+
+  if (c.includes("thunder")) {
+    return wrap(
+      '<svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" focusable="false">' +
+        '<path d="M6 14h11a4 4 0 0 0 0-8 5 5 0 0 0-9-2" fill="none" stroke="currentColor" stroke-width="2"/>' +
+        '<path d="M12 12l-3 6h3l-1 4 5-8h-3l1-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>' +
+      "</svg>"
+    );
+  }
+
+  if (c.includes("snow")) {
+    return wrap(
+      '<svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" focusable="false">' +
+        '<path d="M6 14h11a4 4 0 0 0 0-8 5 5 0 0 0-9-2" fill="none" stroke="currentColor" stroke-width="2"/>' +
+        '<path d="M9 18h0M12 18h0M15 18h0" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round"/>' +
+      "</svg>"
+    );
+  }
+
+  if (c.includes("showers") || c.includes("drizzle") || c.includes("rain")) {
+    return wrap(
+      '<svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" focusable="false">' +
+        '<path d="M6 14h11a4 4 0 0 0 0-8 5 5 0 0 0-9-2" fill="none" stroke="currentColor" stroke-width="2"/>' +
+        '<path d="M8 17v3M12 17v3M16 17v3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+      "</svg>"
+    );
+  }
+
+  return wrap(
+    '<svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" focusable="false">' +
+      '<path d="M6 16h12a4 4 0 0 0 0-8 5 5 0 0 0-9-2" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+    "</svg>"
+  );
+}
+
+
 function scoreToWord(score) {
   var s = Number(score);
   if (!isFinite(s)) return "-";
@@ -639,11 +703,15 @@ function renderSummaryCard(dayScore, summaryData, mode, filteredHours) {
 
   summary.innerHTML =
     "" +
-    '<div class="today-title">Day Summary</div>' +
-
+    '<div class="today-title" style="display:flex; align-items:center; justify-content:space-between; gap:12px;">' +
+    '  <span>Day Summary</span>' +
+    '  ' + svgWeatherTitleFromText(snap.condition) +
+    "</div>" +
+  
     '<div style="display:flex; justify-content:space-between; gap:14px; align-items:stretch; margin-top:10px;">' +
-
+  
     '  <div style="min-width:0;">' +
+
 
     // Temperature first, nowrap, smaller feels-like so icon stays on same line
     '    <div class="small muted" style="margin-top:2px; display:flex; align-items:center; gap:8px; flex-wrap:nowrap;">' +
@@ -651,9 +719,6 @@ function renderSummaryCard(dayScore, summaryData, mode, filteredHours) {
     '      <span style="display:inline-flex; align-items:baseline; gap:8px; min-width:0; white-space:nowrap;">' +
     '        <span style="font-weight:800; color:rgba(255,255,255,0.92);">' + tempVal + "</span>" +
              (feelsVal ? ('<span class="muted" style="font-size:12px; white-space:nowrap;">' + feelsVal + "</span>") : "") +
-    "      </span>" +
-    '      <span style="display:inline-flex; align-items:center; opacity:0.95; margin-left:6px;">' +
-             svgWeatherFromText(snap.condition) +
     "      </span>" +
     "    </div>" +
 
