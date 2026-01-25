@@ -349,6 +349,28 @@ function svgVisibility() {
   );
 }
 
+function svgSunrise() {
+  return svgIconWrap(
+    '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">' +
+      '<path d="M6 16a6 6 0 0 1 12 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+      '<path d="M12 3v6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+      '<path d="M9 6l3-3 3 3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<path d="M4 19h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+    "</svg>"
+  );
+}
+
+function svgSunset() {
+  return svgIconWrap(
+    '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">' +
+      '<path d="M6 16a6 6 0 0 1 12 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+      '<path d="M12 9v6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+      '<path d="M9 12l3 3 3-3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<path d="M4 19h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+    "</svg>"
+  );
+}
+
 
 function svgWind() {
   return svgIconWrap(
@@ -620,6 +642,47 @@ function renderSummaryCard(dayScore, summaryData, mode, filteredHours) {
     "</div>";
 }
 
+function renderSunPill(mode, rawSunriseHHMM, rawSunsetHHMM) {
+  var el = document.getElementById("sunPill");
+  if (!el) return;
+
+  var sr = rawSunriseHHMM || "—";
+  var ss = rawSunsetHHMM || "—";
+
+  // In daylight mode, show the *actual filter window* (rounded) as a subtle note
+  var adj = adjustedSunWindowForMode(mode, rawSunriseHHMM, rawSunsetHHMM);
+  var filterNote = "";
+  if (mode === "daylight" && adj && adj.sunriseHHMM && adj.sunsetHHMM) {
+    filterNote = "Filter " + adj.sunriseHHMM + "–" + adj.sunsetHHMM;
+  }
+
+  el.innerHTML =
+    "" +
+    '<div class="row" style="align-items:center;">' +
+    '  <div style="min-width:0;">' +
+    '    <div class="small muted" style="font-weight:800;">Daylight</div>' +
+    '    <div class="small muted" style="margin-top:8px; display:flex; gap:14px; align-items:center; flex-wrap:wrap;">' +
+    '      <span style="display:inline-flex; align-items:center;">' +
+             svgSunrise() +
+    '        <span style="font-weight:800; color:rgba(255,255,255,0.92);">Sunrise ' + sr + "</span>" +
+    "      </span>" +
+    '      <span style="display:inline-flex; align-items:center;">' +
+             svgSunset() +
+    '        <span style="font-weight:800; color:rgba(255,255,255,0.92);">Sunset ' + ss + "</span>" +
+    "      </span>" +
+    "    </div>" +
+    "  </div>" +
+
+    // Right-side mode hint (keeps the card feeling “alive” without adding a toggle here)
+    '  <div style="text-align:right; white-space:nowrap;">' +
+    '    <div class="muted small">' + (mode === "daylight" ? "Daylight" : "All hours") + "</div>" +
+    (filterNote
+      ? ('<div class="muted small" style="margin-top:4px;">' + filterNote + "</div>")
+      : "") +
+    "  </div>" +
+    "</div>";
+}
+
 /* ----------------------------
    Legacy summary renderer (kept to avoid removing functionality)
    (No longer used once rerenderForMode runs, but retained.)
@@ -668,29 +731,7 @@ function renderDay(data, loc) {
   // initial summary (will be overwritten by rerenderForMode)
   renderSummary(summaryData.score ?? 0, summaryData);
 
-  // KEEP tiles rendering for now (no functionality removed)
-  var tiles = document.getElementById("tiles");
-  if (tiles) {
-    var windKts = (tilesData.wind_kts ?? 0);
-    var gustKts = (tilesData.gust_kts ?? windKts);
-    var windDir = (tilesData.wind_dir ?? "—");
 
-    var waveM = (tilesData.wave_m ?? 0);
-    var periodS = (tilesData.period_s ?? "—");
-
-    var visKm = (tilesData.visibility_km ?? "—");
-    var precipMm = (tilesData.precip_mm ?? "—");
-
-    var sunrise = (tilesData.sunrise ?? "—");
-    var sunset = (tilesData.sunset ?? "—");
-
-    tiles.innerHTML =
-      "" +
-      tileHtml("Wind", windKts + " kts", "Gusts " + gustKts + " kts " + windDir) +
-      tileHtml("Waves", waveM + " m", "Period " + periodS + " s") +
-      tileHtml("Visibility", visKm + " km", "Precip " + precipMm + " mm") +
-      tileHtml("Daylight", "Sunrise " + sunrise, "Sunset " + sunset);
-  }
 
   var tides = document.getElementById("tides");
   if (tides) {
@@ -725,6 +766,9 @@ function renderDay(data, loc) {
   function rerenderForMode(mode) {
     // 0) Filtered hours (single source of truth for mode-specific "max" calculations)
     var filteredHours = filterHours(mode, data.hours || [], rawSunriseHHMM, rawSunsetHHMM);
+    
+    renderSunPill(mode, rawSunriseHHMM, rawSunsetHHMM);
+
 
     // 1) Hourly list (still uses sunrise/sunset because it handles filtering internally)
     if (hoursEl) {
