@@ -302,6 +302,28 @@ function renderHourlyTable(hoursEl, mode, hours, sunrise, sunset) {
   });
 }
 
+function minToHHMMWrapped(mins) {
+  // Accepts mins that may be <0 or >1440 and wraps into 0..1439.
+  var m = Math.round(Number(mins));
+  if (!isFinite(m)) return null;
+  m = ((m % 1440) + 1440) % 1440;
+  var hh = Math.floor(m / 60);
+  var mm = m % 60;
+  return String(hh).padStart(2, "0") + ":" + String(mm).padStart(2, "0");
+}
+
+function formatNoAccessRangeCrossMidnight(centerMin, bufMin) {
+  var start = Number(centerMin) - Number(bufMin);
+  var end = Number(centerMin) + Number(bufMin);
+  if (!isFinite(start) || !isFinite(end) || end <= start) return "";
+
+  var startHHMM = minToHHMMWrapped(start);
+  var endHHMM = minToHHMMWrapped(end);
+  if (!startHHMM || !endHHMM) return "";
+
+  return startHHMM + "\u2013" + endHHMM;
+}
+
 
 /* ----------------------------
    Wind arrow helpers (matches app.js behaviour)
@@ -1038,31 +1060,26 @@ function renderDay(data, loc) {
         var typeLower = String(t.type || "").toLowerCase();
         var isHigh = typeLower.indexOf("high") >= 0;
         var isLow = typeLower.indexOf("low") >= 0;
-
+      
         var bufHours = isHigh ? highNoAccessHours : (isLow ? lowNoAccessHours : 0);
         var bufMin = Math.round(Number(bufHours) * 60);
-
+      
         if (bufMin > 0) {
           var center = parseHHMMToMin(t.time);
           if (center != null) {
-            var startMin = Math.max(0, center - bufMin);
-            var endMin = Math.min(1440, center + bufMin);
-
-            // Convert minutes back to HH:MM using existing window formatter helpers:
-            // formatWindowRange expects HH:MM strings, so we create them.
-            var startHHMM = String(Math.floor(startMin / 60)).padStart(2, "0") + ":" + String(startMin % 60).padStart(2, "0");
-            var endHHMM;
-            if (endMin === 1440) {
-              endHHMM = "24:00";
+            // Midnight-aware (wraps over 00:00 rather than clamping to 00:00 / 24:00)
+            var range = formatNoAccessRangeCrossMidnight(center, bufMin);
+      
+            if (range) {
+              rightHtml =
+                '<div class="muted small">' +
+                  range +
+                  " (" + (isHigh ? "High" : "Low") + ")" +
+                "</div>";
             } else {
-              endHHMM = String(Math.floor(endMin / 60)).padStart(2, "0") + ":" + String(endMin % 60).padStart(2, "0");
+              // fallback if formatting fails: keep height
+              rightHtml = '<div class="muted small">' + height + "</div>";
             }
-
-            rightHtml =
-              '<div class="muted small">' +
-                formatWindowRange(startHHMM, endHHMM) +
-                " (" + (isHigh ? "High" : "Low") + ")" +
-              "</div>";
           } else {
             // fallback if time parsing fails: keep height
             rightHtml = '<div class="muted small">' + height + "</div>";
@@ -1072,6 +1089,7 @@ function renderDay(data, loc) {
           rightHtml = '<div class="muted small">' + height + "</div>";
         }
       }
+
 
       var row = document.createElement("div");
       row.className = "row";
