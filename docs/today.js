@@ -1968,7 +1968,7 @@ function openHourlyOverlayImpl(hourRow) {
   }
 
   if (bodyEl) {
-    bodyEl.innerHTML = renderExtendedGrid(snap, { showScore: true, showTimeLabel: truev showAverages: true,  showAverages: false });
+    bodyEl.innerHTML = renderExtendedGrid(snap, { showScore: true, showTimeLabel: true,  showAverages: false });
   }
 
   root.style.display = "";
