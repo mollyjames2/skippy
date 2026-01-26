@@ -1777,16 +1777,17 @@ function getMarineIndexAligned(weatherIdx) {
 }
 
 /* ---------- Render grid (Today card & overlay share) ---------- */
-
-function renderKVRow(labelHtml, nowHtml, avgHtml) {
+function renderKVRow(labelHtml, nowHtml, avgHtml, showAvg) {
   return (
     '<div class="row">' +
-      '<div class="muted small">' + labelHtml + "</div>" +
+      '<div class="muted small">' + labelHtml + '</div>' +
       '<div style="text-align:right;">' +
-        '<span style="font-weight:800;">' + nowHtml + "</span>" +
-        (avgHtml ? (' <span class="muted small">(' + avgHtml + ")</span>") : "") +
-      "</div>" +
-    "</div>"
+        '<span style="font-weight:800;">' + nowHtml + '</span>' +
+        (showAvg && avgHtml
+          ? ' <span class="muted small">(' + avgHtml + ')</span>'
+          : '') +
+      '</div>' +
+    '</div>'
   );
 }
 
@@ -1809,6 +1810,7 @@ function fmtDir(deg, variable) {
 function renderExtendedGrid(snap, opts) {
   var showScore = !!(opts && opts.showScore);
   var showTimeLabel = !!(opts && opts.showTimeLabel);
+  var showAverages = !!(opts && opts.showAverages); 
 
   var now = snap.now || {};
   var avg = snap.avg || {};
@@ -1817,37 +1819,37 @@ function renderExtendedGrid(snap, opts) {
 
   // Weather
   html += '<div class="muted small" style="font-weight:800; margin:8px 0 6px;">Weather</div>';
-  html += renderKVRow(svgThermometer() + "Air temp", fmtVal(now.temp_c, "°C"), fmtVal(avg.temp_c, "°C"));
-  html += renderKVRow(svgThermometer() + "Feels like", fmtVal(now.feels_c, "°C"), fmtVal(avg.feels_c, "°C"));
+  html += renderKVRow(svgThermometer() + "Air temp", fmtVal(now.temp_c, "°C"), fmtVal(avg.temp_c, "°C"), showAverages);
+  html += renderKVRow(svgThermometer() + "Feels like", fmtVal(now.feels_c, "°C"), fmtVal(avg.feels_c, "°C"), showAverages);
 
-  html += renderKVRow(svgWind() + "Wind", fmtVal(now.wind_kts, " kts"), fmtVal(avg.wind_kts, " kts"));
-  html += renderKVRow(svgWind() + "Gust", fmtVal(now.gust_kts, " kts"), fmtVal(avg.gust_kts, " kts"));
-  html += renderKVRow(svgWind() + "Wind dir", fmtDir(now.wind_dir_deg, snap.windVar), fmtDir(avg.wind_dir_deg, snap.windVar));
+  html += renderKVRow(svgWind() + "Wind", fmtVal(now.wind_kts, " kts"), fmtVal(avg.wind_kts, " kts"), showAverages);
+  html += renderKVRow(svgWind() + "Gust", fmtVal(now.gust_kts, " kts"), fmtVal(avg.gust_kts, " kts"), showAverages);
+  html += renderKVRow(svgWind() + "Wind dir", fmtDir(now.wind_dir_deg, snap.windVar), fmtDir(avg.wind_dir_deg, snap.windVar), showAverages);
 
-  html += renderKVRow("Pressure", fmtVal(now.pressure_hpa, " hPa"), fmtVal(avg.pressure_hpa, " hPa"));
-  html += renderKVRow("Cloud cover", fmtVal(now.cloud_pct, "%"), fmtVal(avg.cloud_pct, "%"));
-  html += renderKVRow("Precip prob", fmtVal(now.pop_pct, "%"), fmtVal(avg.pop_pct, "%"));
-  html += renderKVRow(svgVisibility() + "Visibility", fmtVal(now.vis_km, " km"), fmtVal(avg.vis_km, " km"));
+  html += renderKVRow("Pressure", fmtVal(now.pressure_hpa, " hPa"), fmtVal(avg.pressure_hpa, " hPa"), showAverages);
+  html += renderKVRow("Cloud cover", fmtVal(now.cloud_pct, "%"), fmtVal(avg.cloud_pct, "%"), showAverages);
+  html += renderKVRow("Precip prob", fmtVal(now.pop_pct, "%"), fmtVal(avg.pop_pct, "%"), showAverages);
+  html += renderKVRow(svgVisibility() + "Visibility", fmtVal(now.vis_km, " km"), fmtVal(avg.vis_km, " km"), showAverages);
 
   // Marine
   html += '<div class="muted small" style="font-weight:800; margin:10px 0 6px;">Marine</div>';
-  html += renderKVRow(svgWave() + "Wave height", fmtVal(now.wave_m, " m"), fmtVal(avg.wave_m, " m"));
-  html += renderKVRow(svgWave() + "Wave period", fmtVal(now.wave_period_s, " s"), fmtVal(avg.wave_period_s, " s"));
-  html += renderKVRow(svgWave() + "Wave dir", fmtDir(now.wave_dir_deg, snap.waveDirVar), fmtDir(avg.wave_dir_deg, snap.waveDirVar));
+  html += renderKVRow(svgWave() + "Wave height", fmtVal(now.wave_m, " m"), fmtVal(avg.wave_m, " m"), showAverages);
+  html += renderKVRow(svgWave() + "Wave period", fmtVal(now.wave_period_s, " s"), fmtVal(avg.wave_period_s, " s"), showAverages);
+  html += renderKVRow(svgWave() + "Wave dir", fmtDir(now.wave_dir_deg, snap.waveDirVar), fmtDir(avg.wave_dir_deg, snap.waveDirVar), showAverages);
 
-  html += renderKVRow(svgWave() + "Wind wave height", fmtVal(now.windwave_m, " m"), fmtVal(avg.windwave_m, " m"));
-  html += renderKVRow(svgWave() + "Wind wave period", fmtVal(now.windwave_period_s, " s"), fmtVal(avg.windwave_period_s, " s"));
-  html += renderKVRow(svgWave() + "Wind wave peak", fmtVal(now.windwave_peak_s, " s"), fmtVal(avg.windwave_peak_s, " s"));
-  html += renderKVRow(svgWave() + "Wind wave dir", fmtDir(now.windwave_dir_deg, snap.wwDirVar), fmtDir(avg.windwave_dir_deg, snap.wwDirVar));
+  html += renderKVRow(svgWave() + "Wind wave height", fmtVal(now.windwave_m, " m"), fmtVal(avg.windwave_m, " m"), showAverages);
+  html += renderKVRow(svgWave() + "Wind wave period", fmtVal(now.windwave_period_s, " s"), fmtVal(avg.windwave_period_s, " s"), showAverages);
+  html += renderKVRow(svgWave() + "Wind wave peak", fmtVal(now.windwave_peak_s, " s"), fmtVal(avg.windwave_peak_s, " s"), showAverages);
+  html += renderKVRow(svgWave() + "Wind wave dir", fmtDir(now.windwave_dir_deg, snap.wwDirVar), fmtDir(avg.windwave_dir_deg, snap.wwDirVar), showAverages);
 
-  html += renderKVRow(svgWave() + "Swell height", fmtVal(now.swell_m, " m"), fmtVal(avg.swell_m, " m"));
-  html += renderKVRow(svgWave() + "Swell period", fmtVal(now.swell_period_s, " s"), fmtVal(avg.swell_period_s, " s"));
-  html += renderKVRow(svgWave() + "Swell peak", fmtVal(now.swell_peak_s, " s"), fmtVal(avg.swell_peak_s, " s"));
-  html += renderKVRow(svgWave() + "Swell dir", fmtDir(now.swell_dir_deg, snap.swDirVar), fmtDir(avg.swell_dir_deg, snap.swDirVar));
+  html += renderKVRow(svgWave() + "Swell height", fmtVal(now.swell_m, " m"), fmtVal(avg.swell_m, " m"), showAverages);
+  html += renderKVRow(svgWave() + "Swell period", fmtVal(now.swell_period_s, " s"), fmtVal(avg.swell_period_s, " s"), showAverages);
+  html += renderKVRow(svgWave() + "Swell peak", fmtVal(now.swell_peak_s, " s"), fmtVal(avg.swell_peak_s, " s"), showAverages);
+  html += renderKVRow(svgWave() + "Swell dir", fmtDir(now.swell_dir_deg, snap.swDirVar), fmtDir(avg.swell_dir_deg, snap.swDirVar), showAverages);
 
-  html += renderKVRow("Current", fmtVal(now.current_kts, " kts"), fmtVal(avg.current_kts, " kts"));
-  html += renderKVRow("Current dir", fmtDir(now.current_dir_deg, snap.curDirVar), fmtDir(avg.current_dir_deg, snap.curDirVar));
-  html += renderKVRow("Sea temp", fmtVal(now.sea_temp_c, "°C"), fmtVal(avg.sea_temp_c, "°C"));
+  html += renderKVRow("Current", fmtVal(now.current_kts, " kts"), fmtVal(avg.current_kts, " kts"), showAverages);
+  html += renderKVRow("Current dir", fmtDir(now.current_dir_deg, snap.curDirVar), fmtDir(avg.current_dir_deg, snap.curDirVar), showAverages);
+  html += renderKVRow("Sea temp", fmtVal(now.sea_temp_c, "°C"), fmtVal(avg.sea_temp_c, "°C"), showAverages);
 
   return html;
 }
@@ -1966,9 +1968,7 @@ function openHourlyOverlayImpl(hourRow) {
   }
 
   if (bodyEl) {
-    bodyEl.innerHTML = '<div class="muted small">Values in brackets are averaged over the next ' + minHours + ' hours.</div>' +
-                       '<div class="spacer"></div>' +
-                       renderExtendedGrid(snap, { showScore: true, showTimeLabel: true });
+    bodyEl.innerHTML = renderExtendedGrid(snap, { showScore: true, showTimeLabel: truev showAverages: true,  showAverages: false });
   }
 
   root.style.display = "";
