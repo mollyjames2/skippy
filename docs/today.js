@@ -1275,6 +1275,15 @@ function formatAccessedHHMM(d) {
   return pad2(dt.getHours()) + ":" + pad2(dt.getMinutes());
 }
 
+function findHourRowByHHMM(hhmm) {
+  var hrs = (__todayExtrasState.data && __todayExtrasState.data.hours) ? __todayExtrasState.data.hours : [];
+  for (var i = 0; i < hrs.length; i++) {
+    if (hrs[i] && String(hrs[i].time) === String(hhmm)) return hrs[i];
+  }
+  return null;
+}
+
+
 /* ---------- Now selection: FLOOR to hour ---------- */
 
 function getNowFloorHHMM(accessedAt) {
@@ -1490,6 +1499,12 @@ function renderCurrentConditionsCard() {
 
   // Select "now": floor to hour
   var nowHHMM = getNowFloorHHMM(__todayExtrasState.accessedAt);
+  var hr = findHourRowByHHMM(nowHHMM);
+  var score = hr && hr.score != null ? hr.score : null;
+  var scoreBadge = (score != null)
+    ? (' <span class="' + pillClass(score) + '" style="margin-left:8px;">' + score + '</span>')
+    : '';
+
   var wIdx = getWeatherIndexForHHMM(nowHHMM);
 
   if (wIdx == null) {
@@ -1513,7 +1528,7 @@ function renderCurrentConditionsCard() {
   html += '<div class="row" style="align-items:flex-start;">' +
           '  <div class="muted small">Now</div>' +
           '  <div style="text-align:right;">' +
-          '    <div style="font-weight:800;">' + escapeHtml(snap.conditionTextNow) + '</div>' +
+          '    <div style="font-weight:800;">' + escapeHtml(snap.conditionTextNow) + scoreBadge + '</div>' +
           '    <div class="muted small">Next ' + minHours + ' hrs: mostly ' + escapeHtml(condSummary.mostly) + ' (worst: ' + escapeHtml(condSummary.worst) + ')</div>' +
           "  </div>" +
           "</div>";
@@ -1539,6 +1554,7 @@ function renderWarningsCard_WindowBased() {
   var wIdx = getWeatherIndexForHHMM(nowHHMM);
   if (wIdx == null) {
     card.style.display = "none";
+    card.classList.remove("tone-poor");
     if (spacer) spacer.style.display = "none";
     return;
   }
@@ -1554,11 +1570,14 @@ function renderWarningsCard_WindowBased() {
 
   if (!warnings.length) {
     card.style.display = "none";
+    card.classList.remove("tone-poor");
     if (spacer) spacer.style.display = "none";
     return;
   }
 
   card.style.display = "";
+  card.classList.add("tone-poor");
+
   if (spacer) spacer.style.display = "";
 
   list.innerHTML = "";
@@ -1983,6 +2002,51 @@ function computeWarnings(args) {
   if (!isFinite(start) || !isFinite(end) || end <= start) return [];
 
   var b = __todayExtrasState.bundle;
+  
+  var env = getScoreEnvironment(); // "coastal" | "estuary"
+
+  // Default (coastal) thresholds
+  var TH = {
+    // Wind vs current
+    currentMinKts: 1.0,
+    windMinKts: 12,
+    opposeWithinDeg: 60,
+
+    // Gustiness
+    gustSpreadMinKts: 8,
+
+    // Visibility
+    visMinKm: 2,
+
+    // Showers
+    popMinPct: 60,
+
+    // Choppy seas proxy
+    choppyWaveMinM: 1.2,
+    choppyPeriodMaxS: 7,
+
+    // Cold exposure
+    coldFeelsLikeMaxC: 5,
+  };
+
+  // Relaxed (estuary / upriver)
+  if (env === "estuary") {
+    TH.currentMinKts = 2;
+    TH.windMinKts = 16;
+    TH.opposeWithinDeg = 40;
+
+    TH.gustSpreadMinKts = 12;
+
+    TH.visMinKm = 1.;2
+
+    TH.popMinPct = 60;
+
+    TH.choppyWaveMinM = 1.6;
+    TH.choppyPeriodMaxS = 6;
+
+    TH.coldFeelsLikeMaxC = 5;
+  }
+
 
   // Weather
   var wind = getHourlyFieldSafe(b, "weather", "wind_speed_10m");
@@ -2054,21 +2118,21 @@ function computeWarnings(args) {
     var cDir = curD ? Number(curD[mi]) : null;
 
     if (!isFinite(wKts) || !isFinite(wDir) || !isFinite(cKts) || !isFinite(cDir)) return false;
-    if (cKts < 1.0) return false;
-    if (wKts < 12) return false;
+    if (cKts <  TH.currentMinKts) return false;
+    if (wKts <  TH.WindMinKts) return false;
 
     // Opposing if wind "to" direction approx opposite current direction.
     // WindDir is "from", so "to" = +180.
     var windTo = (wDir + 180) % 360;
     var diff = circularDiffDeg(windTo, cDir);
     if (diff == null) return false;
-    return diff <= 60;
+    return diff <= TH.opposeWithinDeg;
   });
 
   if (windAgainst) {
     warnings.push({
       title: "Wind against current",
-      detail: (mode === "now") ? "Steeper chop possible." : "Possible within next window.",
+      detail: (mode === "now") ? "Steeper chop possible." : "Steeper chop possible.",
     });
   }
 
@@ -2081,7 +2145,7 @@ function computeWarnings(args) {
     var spread = gK - wK;
     if (maxSpread == null || spread > maxSpread) maxSpread = spread;
   }
-  if (maxSpread != null && maxSpread >= 8) {
+  if (maxSpread != null && maxSpread >= TH.gustSpreadMinKts) {
     warnings.push({
       title: "Gusty wind",
       detail: "Gust spread up to " + round0(maxSpread) + " kts",
@@ -2094,7 +2158,7 @@ function computeWarnings(args) {
     if (!isFinite(m)) return null;
     return m / 1000;
   });
-  if (minVisKm != null && minVisKm <= 2) {
+  if (minVisKm != null && minVisKm <= TH.visMinKm) {
     warnings.push({
       title: "Reduced visibility",
       detail: "As low as " + round1(minVisKm) + " km",
@@ -2103,7 +2167,7 @@ function computeWarnings(args) {
 
   // 4) Showers possible (precip probability)
   var maxPop = worstMax(pop, function (v) { return Number(v); });
-  if (maxPop != null && maxPop >= 60) {
+  if (maxPop != null && maxPop >= TH.popMinPct) {
     warnings.push({
       title: "Showers possible",
       detail: "Chance up to " + round0(maxPop) + "%",
@@ -2117,18 +2181,18 @@ function computeWarnings(args) {
     var h = waveH ? Number(waveH[mi]) : null;
     var p = waveP ? Number(waveP[mi]) : null;
     if (!isFinite(h) || !isFinite(p)) return false;
-    return (h >= 1.2 && p <= 7);
+    return (h >= TH.choppyWaveMinM && p <=  TH.choppyPeriodMaxS);
   });
   if (choppy) {
     warnings.push({
       title: "Choppy seas",
-      detail: (mode === "now") ? "Short-period chop possible." : "Possible within next window.",
+      detail: (mode === "now") ? "Short-period chop possible." : "Short-period chop possible.",
     });
   }
 
   // 6) Cold stress (feels-like)
   var minFeels = worstMin(feels, function (v) { return Number(v); });
-  if (minFeels != null && minFeels <= 4) {
+  if (minFeels != null && minFeels <=  TH.coldFeelsLikeMaxC) {
     warnings.push({
       title: "Cold exposure",
       detail: "Feels like down to " + round0(minFeels) + "°C",
