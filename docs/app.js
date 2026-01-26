@@ -783,7 +783,7 @@ function renderTodayTidesCard(dayData) {
         if (a) return;
       }
       var date = (dayData && dayData.date) ? dayData.date : todayIsoLondon();
-      window.location.href = "./day.html?date=" + encodeURIComponent(date);
+      window.location.href = "./today.html?date=" + encodeURIComponent(date);
     });
   }
 }

@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Skippy - Today</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <div class="container">
+      <div class="row">
+        <a class="btn" href="./index.html">Back</a>
+        <div style="text-align: right">
+          <div class="muted small" id="location">South Devon UK</div>
+          <div style="font-weight: 800" id="title">Loading...</div>
+        </div>
+      </div>
+
+      <div class="spacer"></div>
+
+      <div id="summary" class="card">
+        <div class="muted small">Loading...</div>
+      </div>
+
+      <div class="spacer"></div>
+
+      <!-- Warnings (shown only when active) -->
+      <div id="warningsCard" class="card" style="display:none;">
+        <h2 style="margin:0;">Warnings</h2>
+        <div class="spacer"></div>
+        <div class="list" id="warnings"></div>
+      </div>
+
+      <div class="spacer" id="warningsSpacer" style="display:none;"></div>
+
+      <!-- Current conditions (extended) -->
+      <div id="currentConditionsCard" class="card">
+        <h2 style="margin:0;">Current conditions</h2>
+        <div class="spacer"></div>
+
+        <div class="muted small" id="currentConditionsMeta">Loading...</div>
+        <div class="spacer"></div>
+
+        <div class="list" id="currentConditions"></div>
+      </div>
+
+      <div class="spacer"></div>
+
+      <div id="sunPill" class="card"></div>
+
+      <div class="spacer"></div>
+
+      <!-- Tides -->
+      <div class="card">
+        <h2>Tides</h2>
+        <div class="spacer"></div>
+
+        <!-- This header row is only populated/shown when mooring no-access is enabled -->
+        <div class="row" id="noAccessHeaderRow" style="display:none;">
+          <div></div>
+          <div class="muted small" style="font-weight:800;">No mooring access</div>
+        </div>
+
+        <div class="list" id="tides"></div>
+      </div>
+
+      <div class="spacer"></div>
+
+      <!-- Recommended windows -->
+      <div class="card">
+        <h2>Recommended windows</h2>
+        <div class="spacer"></div>
+        <div class="list" id="windows"></div>
+      </div>
+
+      <div class="spacer"></div>
+
+      <!-- Hourly conditions -->
+      <div class="card">
+        <div class="row" style="align-items:flex-start;">
+          <h2 style="margin:0;">Hourly conditions</h2>
+
+          <div class="segmented" id="hoursToggle" aria-label="Hourly filter">
+            <button class="segbtn" data-mode="all" type="button">All hours</button>
+            <button class="segbtn" data-mode="daylight" type="button">Daylight</button>
+          </div>
+        </div>
+
+        <div class="spacer"></div>
+        <div class="list" id="hours"></div>
+      </div>
+
+      <div class="spacer"></div>
+    </div>
+
+    <script src="./config.js"></script>
+    <script type="module" src="./today.js"></script>
+  </body>
+</html>
