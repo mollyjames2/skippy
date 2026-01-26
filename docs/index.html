@@ -13,16 +13,32 @@
 
     <div id="appRoot">
       <div class="container">
+      
+      
         <div class="topbar">
           <div>
             <img src="./assets/logo_horz.png" alt="Skippy" class="logo-horz" />
             <!-- <div id="location" class="muted small">South Devon UK</div> -->
           </div>
-
+        
           <div style="flex:1"></div>
-
+        
+          <button id="webcamBtn" class="btn" aria-label="Webcam">
+            <span style="display:inline-flex; align-items:center; gap:8px;">
+              <svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">
+                <path d="M4 7h10a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2z"
+                      fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+                <path d="M16 10l6-3v10l-6-3v-4z"
+                      fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/>
+              </svg>
+              <span>Webcam</span>
+            </span>
+          </button>
+        
           <button id="settingsBtn" class="btn">Settings</button>
         </div>
+
+    
 
         <div class="spacer"></div>
           <div id="hoursModeCard" class="card hours-mode-card" role="button" aria-label="Daily hours mode (tap to change)">

@@ -26,7 +26,15 @@ function wireHomeTopbar() {
       window.location.href = "./settings.html";
     });
   }
+
+  var webcamBtn = document.getElementById("webcamBtn");
+  if (webcamBtn) {
+    webcamBtn.addEventListener("click", function () {
+      window.location.href = "https://royalcastle.co.uk/";
+    });
+  }
 }
+
 
 function wireLocationBar() {
   var bar = document.getElementById("locationBar");
