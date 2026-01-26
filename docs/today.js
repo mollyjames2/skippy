@@ -1525,15 +1525,31 @@ function renderCurrentConditionsCard() {
   var condSummary = conditionMostlyWorst(getHourlyFieldSafe(__todayExtrasState.bundle, "weather", "weather_code"), win.start, win.end);
 
   var html = "";
+  
   html += '<div class="row" style="align-items:flex-start;">' +
           '  <div class="muted small">Now</div>' +
+          '  <div></div>' +
+          '</div>' +
+  
+          // badge row under "Now"
+          '<div class="row" style="align-items:flex-start; margin-top:2px;">' +
+          '  <div>' + scoreBadge + '</div>' +
+          '  <div></div>' +
+          '</div>' +
+  
+          // existing content row
+          '<div class="row" style="align-items:flex-start;">' +
+          '  <div></div>' +
           '  <div style="text-align:right;">' +
-          '    <div style="font-weight:800;">' + escapeHtml(snap.conditionTextNow) + scoreBadge + '</div>' +
-          '    <div class="muted small">Next ' + minHours + ' hrs: mostly ' + escapeHtml(condSummary.mostly) + ' (worst: ' + escapeHtml(condSummary.worst) + ')</div>' +
-          "  </div>" +
-          "</div>";
-
+          '    <div style="font-weight:800;">' + escapeHtml(snap.conditionTextNow) + '</div>' +
+          '    <div class="muted small">Next ' + minHours + ' hrs: mostly ' +
+                 escapeHtml(condSummary.mostly) + ' (worst: ' +
+                 escapeHtml(condSummary.worst) + ')</div>' +
+          '  </div>' +
+          '</div>';
+  
   html += '<div class="spacer"></div>';
+
 
   html += renderExtendedGrid(snap, { showScore: false, showTimeLabel: false, showAverages: true });
 
