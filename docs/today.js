@@ -2037,7 +2037,7 @@ function computeWarnings(args) {
 
     TH.gustSpreadMinKts = 12;
 
-    TH.visMinKm = 1.;2
+    TH.visMinKm = 1.2
 
     TH.popMinPct = 60;
 
