@@ -1520,7 +1520,7 @@ function renderCurrentConditionsCard() {
 
   html += '<div class="spacer"></div>';
 
-  html += renderExtendedGrid(snap, { showScore: false, showTimeLabel: false });
+  html += renderExtendedGrid(snap, { showScore: false, showTimeLabel: false, showAverages: true });
 
   listEl.innerHTML = html;
 }
