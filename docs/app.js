@@ -42,7 +42,7 @@ function wireHomeTopbar() {
       }
     });
   }
-
+}
 
 
 function wireLocationBar() {
