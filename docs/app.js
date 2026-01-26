@@ -27,13 +27,22 @@ function wireHomeTopbar() {
     });
   }
 
-  var webcamBtn = document.getElementById("webcamBtn");
+
+    var webcamBtn = document.getElementById("webcamBtn");
   if (webcamBtn) {
-    webcamBtn.addEventListener("click", function () {
-      window.location.href = "https://royalcastle.co.uk/";
+    webcamBtn.addEventListener("click", function (e) {
+      e.preventDefault();
+
+      var w = window.open("https://royalcastle.co.uk/", "_blank");
+      if (w) {
+        try { w.opener = null; } catch (err) {}
+      } else {
+        // fallback if popup blocked
+        window.location.href = "https://royalcastle.co.uk/";
+      }
     });
   }
-}
+
 
 
 function wireLocationBar() {
@@ -1120,8 +1129,6 @@ async function main() {
   showToastFromStorage();
 
   // Wire UI first
-  wireHomeTopbar();
-  wireLocationBar();
   wireHomeTopbar();
   wireLocationBar();
   renderHoursModeBanner();
