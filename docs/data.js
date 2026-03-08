@@ -35,6 +35,9 @@ const SCORE_TEMP_KEY = "skippy.score.includeTemp"; // "on" | "off"
 // Environment tuning
 const SCORE_ENVIRONMENT_KEY = "skippy.score.environment"; // "coastal" | "estuary" (default coastal)
 
+// Fair weather sailor: "on" | "off" (default off)
+const SCORE_FAIR_WEATHER_KEY = "skippy.score.fairWeatherSailor";
+
 // Recommended windows
 // Storage value: integer hours (1..8)
 const MIN_RECOMMENDED_WINDOW_HOURS_KEY = "skippy.recommended.minHours";
@@ -73,6 +76,15 @@ function getScoreEnvironment() {
     return v === "estuary" ? "estuary" : "coastal";
   } catch (e) {
     return "coastal";
+  }
+}
+
+function getFairWeatherSailor() {
+  try {
+    const v = localStorage.getItem(SCORE_FAIR_WEATHER_KEY);
+    return v === "on";
+  } catch (e) {
+    return false;
   }
 }
 
@@ -438,6 +450,7 @@ function buildHourRowsForDayScore(dayIso, wHourly, mHourly) {
       environment: env,
       profile: getScoreProfile(),
       includeTemp: getScoreTempEnabled(),
+      fairWeatherSailor: getFairWeatherSailor(),
 
       wave_m: waveMH || 0,
       wave_period_s: wavePeriodH || 0,
@@ -729,6 +742,7 @@ function buildWeekPayloadFromBundle(bundle, place) {
       scoreProfile: getScoreProfile(),
       includeTemp: getScoreTempEnabled(),
       environment: env,
+      fairWeatherSailor: getFairWeatherSailor(),
 
       weatherHourlyTime: (wHourly && wHourly.time) ? wHourly.time : [],
       weatherHourlyWindKmh: (wHourly && wHourly.wind_speed_10m) ? wHourly.wind_speed_10m : [],
@@ -848,6 +862,8 @@ async function buildDayPayloadFromBundle(bundle, place, dayIso) {
     windMax_kmh: windMaxKmh || 0,
   });
 
+  const fairWeatherSailor = getFairWeatherSailor();
+
   const title = formatDow(dayIso) + " " + formatLabel(dayIso);
 
   const wHourly = (bundle && bundle.weather && bundle.weather.hourly) ? bundle.weather.hourly : {};
@@ -900,6 +916,7 @@ async function buildDayPayloadFromBundle(bundle, place, dayIso) {
       environment: env,
       profile: getScoreProfile(),
       includeTemp: getScoreTempEnabled(),
+      fairWeatherSailor: fairWeatherSailor,
 
       wave_m: waveMH || 0,
       wave_period_s: wavePeriodH || 0,

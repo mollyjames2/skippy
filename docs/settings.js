@@ -23,6 +23,9 @@ var SCORE_PROFILE_KEY = "skippy.score.profile";
 // Temperature toggle: "on" | "off"
 var SCORE_TEMP_KEY = "skippy.score.includeTemp";
 
+// Fair weather sailor toggle: "on" | "off"
+var SCORE_FAIR_WEATHER_KEY = "skippy.score.fairWeatherSailor";
+
 // Environment: "coastal" | "estuary" (default coastal)
 var SCORE_ENVIRONMENT_KEY = "skippy.score.environment";
 
@@ -106,6 +109,22 @@ function getScoreTemp() {
 function setScoreTemp(v) {
   try {
     localStorage.setItem(SCORE_TEMP_KEY, v === "on" ? "on" : "off");
+  } catch (e) {}
+}
+
+function getScoreFairWeather() {
+  var v = "";
+  try {
+    v = localStorage.getItem(SCORE_FAIR_WEATHER_KEY) || "";
+  } catch (e) {
+    v = "";
+  }
+  return v === "on" ? "on" : "off";
+}
+
+function setScoreFairWeather(v) {
+  try {
+    localStorage.setItem(SCORE_FAIR_WEATHER_KEY, v === "on" ? "on" : "off");
   } catch (e) {}
 }
 
@@ -224,6 +243,10 @@ function setupScoreTempToggle() {
   setupSegmented("scoreTemp", "data-temp", getScoreTemp, setScoreTemp);
 }
 
+function setupScoreFairWeatherToggle() {
+  setupSegmented("scoreFairWeather", "data-fair", getScoreFairWeather, setScoreFairWeather);
+}
+
 function setupScoreEnvironmentToggle() {
   setupSegmented("scoreEnvironment", "data-env", getScoreEnvironment, setScoreEnvironment);
 }
@@ -276,6 +299,7 @@ document.addEventListener("DOMContentLoaded", function () {
   setupDailyScoreToggle();
   setupScoreProfileToggle();
   setupScoreTempToggle();
+  setupScoreFairWeatherToggle();
   setupScoreEnvironmentToggle();
   setupMinWindowHoursSelect();
   setupMooringNoAccessSelect("mooringHighNoAccess", getMooringHighNoAccessHours, setMooringHighNoAccessHours);

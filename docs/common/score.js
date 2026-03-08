@@ -299,8 +299,20 @@ export function calculateBoatingScore(input) {
     1
   );
 
-  const score = 100 * (1 - hazardTotal);
-  return Math.round(clamp(score, 0, 100));
+  let score = 100 * (1 - hazardTotal);
+  score = Math.round(clamp(score, 0, 100));
+
+  // --- FAIR WEATHER SAILOR PENALTY ---
+  // When enabled, apply a heavy multiplicative penalty based on rain intensity.
+  // This is additive on top of the existing vis_rain hazard channel.
+  if (opts0.fairWeatherSailor === true && Number.isFinite(precipMm) && precipMm > 0) {
+    const rainH = hazardRain(precipMm); // 0..1
+    // Factor: 1.0 at 0 mm/hr → 0.30 at 10+ mm/hr
+    const penaltyFactor = 1 - 0.70 * rainH;
+    score = Math.round(clamp(score * penaltyFactor, 0, 100));
+  }
+
+  return score;
 }
 
 /**
@@ -763,6 +775,7 @@ export function scoreDayFromHourlySeries({
   scoreProfile,
   includeTemp,
   environment, // coastal vs estuary
+  fairWeatherSailor, // optional boolean
 
   // Weather series
   weatherHourlyTime,
@@ -851,6 +864,7 @@ export function scoreDayFromHourlySeries({
           environment: env,
           profile,
           includeTemp: tempOn,
+          fairWeatherSailor: fairWeatherSailor === true,
 
           wave_m: wave ?? 0,
           wave_period_s: period ?? 0,
