@@ -943,7 +943,7 @@ function renderWeek(data, loc) {
             '    <div class="best-subtle" style="margin-top:8px;">Tap to explore</div>' +
             "  </div>" +
         
-            // RIGHT COLUMN — score badge (same as Today)
+            // RIGHT COLUMN ï¿½ score badge (same as Today)
             '  <div class="today-score-wrap">' +
             '    <div class="today-score-stack">' +
             '      <div class="today-score-label">Boating score</div>' +
@@ -1197,8 +1197,13 @@ async function main() {
     setFooterNote("Error loading data: " + e.message);
   }
 }
-window.addEventListener("pageshow", function () {
+window.addEventListener("pageshow", function (e) {
   renderHoursModeBanner();
+  // If the page was restored from bfcache (e.g. back from settings),
+  // settings like fairWeatherSailor may have changed â€” reload to recompute scores.
+  if (e.persisted) {
+    window.location.reload();
+  }
 });
 
 

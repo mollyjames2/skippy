@@ -1190,5 +1190,13 @@ async function main() {
   }
 }
 
+// If the page is restored from bfcache (e.g. back from settings),
+// settings like fairWeatherSailor may have changed — reload to recompute scores.
+window.addEventListener("pageshow", function (e) {
+  if (e.persisted) {
+    window.location.reload();
+  }
+});
+
 main();
 
