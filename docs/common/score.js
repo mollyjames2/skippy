@@ -272,12 +272,9 @@ export function calculateBoatingScore(input) {
     profileCfg: cfg,
   });
 
-  const H_vis_rain = hazardVisRain({
-    visibility_m: visM,
-    precip_mm: precipMm,
-    wind_hazard: HwindMean,
-    profileCfg: cfg,
-  });
+  // Visibility-only hazard. Rain is handled exclusively via the Fair Weather Sailor penalty.
+  let H_vis_rain = hazardVisibility(visM, cfg);
+  if (cfg.profile === "safety") H_vis_rain = clamp(H_vis_rain * 1.05, 0, 1);
 
   const H_temp = includeTemp
     ? hazardTemperature({
@@ -303,8 +300,8 @@ export function calculateBoatingScore(input) {
   score = Math.round(clamp(score, 0, 100));
 
   // --- FAIR WEATHER SAILOR PENALTY ---
-  // When enabled, apply a heavy multiplicative penalty based on rain intensity.
-  // This is additive on top of the existing vis_rain hazard channel.
+  // When enabled, apply a multiplicative penalty based on rain intensity.
+  // This is the only path through which rain affects the score.
   if (opts0.fairWeatherSailor === true && Number.isFinite(precipMm) && precipMm > 0) {
     const rainH = hazardRain(precipMm); // 0..1
     // Factor: 1.0 at 0 mm/hr → 0.30 at 10+ mm/hr
