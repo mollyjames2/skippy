@@ -304,8 +304,8 @@ export function calculateBoatingScore(input) {
   // This is the only path through which rain affects the score.
   if (opts0.fairWeatherSailor === true && Number.isFinite(precipMm) && precipMm > 0) {
     const rainH = hazardRain(precipMm); // 0..1
-    // Factor: 1.0 at 0 mm/hr → 0.30 at 10+ mm/hr
-    const penaltyFactor = 1 - 0.70 * rainH;
+    // Factor: 1.0 at 0 mm/hr → 0.15 at 10+ mm/hr
+    const penaltyFactor = 1 - 0.85 * rainH;
     score = Math.round(clamp(score * penaltyFactor, 0, 100));
   }
 
