@@ -8,16 +8,13 @@ import { getDayData, getBundle } from "./data.js";
 import { scoreDayFromHourRows } from "./common/score.js";
 import { windowsByTierFromHourRows } from "./common/window.js";
 
-// Settings storage keys (shared behaviour)
-const SETTINGS_DAILY_SCORE_MODE_KEY = "skippy.score.dailyHoursMode"; // "all" | "daylight"
-const MIN_RECOMMENDED_WINDOW_HOURS_KEY = "skippy.recommended.minHours"; // int 1..8 (default 2)
-
-// Environment (shared with Settings)
-const SCORE_ENVIRONMENT_KEY = "skippy.score.environment"; // "coastal" | "estuary"
-
-// Mooring access - no access buffer hours around tides (0..3 in 0.5 steps)
-const MOORING_HIGH_NO_ACCESS_HOURS_KEY = "skippy.mooring.noAccess.highHours";
-const MOORING_LOW_NO_ACCESS_HOURS_KEY = "skippy.mooring.noAccess.lowHours";
+import {
+  getDailyScoreMode,
+  getScoreEnvironment,
+  getMinRecommendedWindowHours,
+  getMooringHighNoAccessHours,
+  getMooringLowNoAccessHours,
+} from "./common/settings.js";
 
 
 function getDateParam() {
@@ -47,80 +44,6 @@ function conditionToIcon(conditionText) {
   if (t.indexOf("clear") >= 0 || t.indexOf("mostly") >= 0) return "\u26c5\ufe0f";
   return "\ud83c\udf25\ufe0f";
 }
-
-/* ----------------------------
-   Read Settings (for initial mode only)
----------------------------- */
-
-function getSettingsDailyMode() {
-  var v = "";
-  try {
-    v = localStorage.getItem(SETTINGS_DAILY_SCORE_MODE_KEY) || "";
-  } catch (e) {
-    v = "";
-  }
-  return v === "daylight" ? "daylight" : "all";
-}
-
-function getScoreEnvironment() {
-  var v = "";
-  try {
-    v = localStorage.getItem(SCORE_ENVIRONMENT_KEY) || "";
-  } catch (e) {
-    v = "";
-  }
-  return v === "estuary" ? "estuary" : "coastal";
-}
-
-function clampInt(n, a, b) {
-  var x = Math.trunc(Number(n));
-  if (!isFinite(x)) return a;
-  return Math.max(a, Math.min(b, x));
-}
-
-function getMinRecommendedWindowHours() {
-  var v = "";
-  try {
-    v = localStorage.getItem(MIN_RECOMMENDED_WINDOW_HOURS_KEY) || "";
-  } catch (e) {
-    v = "";
-  }
-  if (!v) return 2;
-  return clampInt(parseInt(v, 10), 1, 8);
-}
-
-function clampMooringHours(v) {
-  // Allowed: 0, 0.5, 1, 1.5, 2, 2.5, 3
-  var x = Number(v);
-  if (!isFinite(x)) return 0;
-  var snapped = Math.round(x * 2) / 2;
-  if (snapped < 0) snapped = 0;
-  if (snapped > 3) snapped = 3;
-  return snapped;
-}
-
-function getMooringHighNoAccessHours() {
-  var v = "";
-  try {
-    v = localStorage.getItem(MOORING_HIGH_NO_ACCESS_HOURS_KEY) || "";
-  } catch (e) {
-    v = "";
-  }
-  if (v === "") return 0;
-  return clampMooringHours(v);
-}
-
-function getMooringLowNoAccessHours() {
-  var v = "";
-  try {
-    v = localStorage.getItem(MOORING_LOW_NO_ACCESS_HOURS_KEY) || "";
-  } catch (e) {
-    v = "";
-  }
-  if (v === "") return 0;
-  return clampMooringHours(v);
-}
-
 
 /* ----------------------------
    Toggle (local-only; no persistence)
@@ -1183,7 +1106,7 @@ function renderDay(data, loc, bundle) {
   }
 
   // Initial mode comes from Settings (NOT any prior day view toggle)
-  var initialMode = getSettingsDailyMode();
+  var initialMode = getDailyScoreMode();
   rerenderForMode(initialMode);
 
   // Toggle is local-only; does not affect settings

@@ -21,89 +21,16 @@ import {
   pickBestTierWindow,
 } from "./common/window.js";
 
+import {
+  getDailyScoreHoursMode,
+  getScoreProfile,
+  getScoreTempEnabled,
+  getScoreEnvironment,
+  getFairWeatherSailor,
+  getMinRecommendedWindowHours,
+} from "./common/settings.js";
+
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
-
-// Daily score preference: whether to average all hours or daylight hours.
-// Storage values: "all" | "daylight"
-// Scoring module expects: "allhours" | "daylight"
-const DAILY_SCORE_HOURS_MODE_KEY = "skippy.score.dailyHoursMode";
-
-// Score tuning
-const SCORE_PROFILE_KEY = "skippy.score.profile"; // "safety" | "standard" | "opportunity"
-const SCORE_TEMP_KEY = "skippy.score.includeTemp"; // "on" | "off"
-
-// Environment tuning
-const SCORE_ENVIRONMENT_KEY = "skippy.score.environment"; // "coastal" | "estuary" (default coastal)
-
-// Fair weather sailor: "on" | "off" (default off)
-const SCORE_FAIR_WEATHER_KEY = "skippy.score.fairWeatherSailor";
-
-// Recommended windows
-// Storage value: integer hours (1..8)
-const MIN_RECOMMENDED_WINDOW_HOURS_KEY = "skippy.recommended.minHours";
-
-function getDailyScoreHoursMode() {
-  try {
-    const v = localStorage.getItem(DAILY_SCORE_HOURS_MODE_KEY);
-    return v === "daylight" ? "daylight" : "allhours";
-  } catch (e) {
-    return "allhours";
-  }
-}
-
-function getScoreProfile() {
-  try {
-    const v = localStorage.getItem(SCORE_PROFILE_KEY);
-    if (v === "safety" || v === "opportunity") return v;
-    return "standard";
-  } catch (e) {
-    return "standard";
-  }
-}
-
-function getScoreTempEnabled() {
-  try {
-    const v = localStorage.getItem(SCORE_TEMP_KEY);
-    return v === "on";
-  } catch (e) {
-    return false;
-  }
-}
-
-function getScoreEnvironment() {
-  try {
-    const v = localStorage.getItem(SCORE_ENVIRONMENT_KEY);
-    return v === "estuary" ? "estuary" : "coastal";
-  } catch (e) {
-    return "coastal";
-  }
-}
-
-function getFairWeatherSailor() {
-  try {
-    const v = localStorage.getItem(SCORE_FAIR_WEATHER_KEY);
-    return v === "on";
-  } catch (e) {
-    return false;
-  }
-}
-
-function clampInt(n, a, b) {
-  const x = Math.trunc(Number(n));
-  if (!Number.isFinite(x)) return a;
-  return Math.max(a, Math.min(b, x));
-}
-
-function getMinRecommendedWindowHours() {
-  try {
-    const raw = localStorage.getItem(MIN_RECOMMENDED_WINDOW_HOURS_KEY);
-    if (raw == null || raw === "") return 2;
-    const n = parseInt(raw, 10);
-    return clampInt(n, 1, 8);
-  } catch (e) {
-    return 2;
-  }
-}
 
 /**
  * For "daylight" scoring, the Day screen uses a rounded window:

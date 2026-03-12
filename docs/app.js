@@ -2,6 +2,7 @@
 
 import { pillClass, getSavedLocation } from "./common/core.js";
 import { getWeekData, getDayData } from "./data.js";
+import { getDailyScoreMode, getMinRecommendedWindowHours } from "./common/settings.js";
 
 function setText(id, text) {
   var el = document.getElementById(id);
@@ -558,15 +559,7 @@ function renderTodayTidesCard(dayData) {
   var score = dayData && dayData.summary ? dayData.summary.score : null;
   var ratingWord = scoreToWord(score);
   // ---- Best time to boat (time-aware, display only) ----
-  var minHours = (function () {
-    try {
-      var v = localStorage.getItem("skippy.recommended.minHours");
-      var n = Number(v);
-      return (isFinite(n) && n >= 1) ? n : 2;
-    } catch (e) {
-      return 2;
-    }
-  })();
+  var minHours = getMinRecommendedWindowHours();
   
   var todayBestTime = deriveTodayBestTimeDisplay(
     dayData && dayData.recommended,
@@ -1080,17 +1073,6 @@ function maybeShowSplash() {
   }, 800);
 }
 
-var DAILY_SCORE_MODE_KEY = "skippy.score.dailyHoursMode";
-
-function getDailyHoursModeForBanner() {
-  try {
-    var v = localStorage.getItem(DAILY_SCORE_MODE_KEY) || "";
-    return v === "daylight" ? "daylight" : "all";
-  } catch (e) {
-    return "all";
-  }
-}
-
 function renderHoursModeBanner() {
   var pill = document.getElementById("hoursModePill");
   var card = document.getElementById("hoursModeCard");
@@ -1106,7 +1088,7 @@ function renderHoursModeBanner() {
   // Ensure visible if location exists
   card.style.display = "";
 
-  var mode = getDailyHoursModeForBanner();
+  var mode = getDailyScoreMode();
 
   if (mode === "daylight") {
     pill.className = "pill ok";
