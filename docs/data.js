@@ -313,6 +313,12 @@ function kmhToKnotsInt(kmh) {
   return Math.round(k);
 }
 
+function msToKnots(ms) {
+  const n = Number(ms);
+  if (!isFinite(n)) return null;
+  return Math.round(n * 1.94384 * 10) / 10;
+}
+
 function summarizeVisibilityKmForDay(dayIso, wHourly) {
   const times = (wHourly && wHourly.time) ? wHourly.time : [];
   const visM = (wHourly && wHourly.visibility) ? wHourly.visibility : [];
@@ -879,6 +885,9 @@ async function buildDayPayloadFromBundle(bundle, place, dayIso) {
 
       wave_m: round1(waveMH || 0),
       wave_period_s: round1(wavePeriodH || 0),
+
+      curr_kts: msToKnots(curMs),
+      curr_dir: (curDir != null && isFinite(Number(curDir))) ? degToCompass(curDir) : null,
 
       precip_mm: round1(precipMmH || 0),
       visibility_km: isFinite(Number(visMH)) ? round1(Number(visMH) / 1000) : null,

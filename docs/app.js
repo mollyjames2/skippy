@@ -471,6 +471,30 @@ function svgWeatherFromText(conditionText) {
   );
 }
 
+function svgArrowLarge(compassDeg) {
+  if (compassDeg == null || !isFinite(Number(compassDeg))) return "";
+  // Compass: 0=N, 90=E. CSS rotate: 0=right (East). So CSS = compass - 90.
+  var cssDeg = (Number(compassDeg) - 90 + 360) % 360;
+  return (
+    '<span style="display:flex; align-items:center; justify-content:center; ' +
+      'transform:rotate(' + cssDeg + 'deg); transform-origin:50% 50%;">' +
+      '<svg viewBox="0 0 24 24" width="28" height="28" aria-hidden="true" focusable="false">' +
+        '<path d="M3 12h16" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"/>' +
+        '<path d="M14 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '</svg>' +
+    '</span>'
+  );
+}
+
+function svgCurrentIcon() {
+  return svgIconWrap(
+    '<svg viewBox="0 0 24 24" width="14" height="14" aria-hidden="true" focusable="false">' +
+      '<path d="M2 12c2.5-4 5-4 7 0s4.5 4 7 0 4.5-4 7 0" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/>' +
+      '<path d="M17 8l4 4-4 4" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+    '</svg>'
+  );
+}
+
 // Remove any existing tone-* classes then add the one we want
 function forceToneClass(el, toneClass) {
   if (!el) return;
@@ -496,6 +520,139 @@ function setBestCardClick(bestEl, handlerOrNull) {
   } else {
     bestEl.style.cursor = "default";
   }
+}
+
+/* ---------------------------------------------
+   Current Conditions card renderer
+--------------------------------------------- */
+
+function renderCurrentConditionsCard(dayData) {
+  var condCard = document.getElementById("condCard");
+  if (!condCard) return;
+
+  var hours = (dayData && dayData.hours) ? dayData.hours : [];
+  var current = findCurrentHour(hours);
+  if (!current) {
+    condCard.style.display = "none";
+    return;
+  }
+
+  var score = current.score != null ? current.score : null;
+  var toneClass = toneClassForScore(score);
+  var ratingWord = scoreToWord(score);
+
+  // Wind — FROM direction, arrow points TO (+ 180)
+  var windKts = current.wind_kts != null ? current.wind_kts : "-";
+  var windDir = current.wind_dir || "-";
+  var windArrowHtml = svgArrowLarge(windArrowDegFromCompass(windDir));
+
+  // Current — already flowing TOWARD, no flip
+  var currKts = current.curr_kts != null ? current.curr_kts : null;
+  var currDir = current.curr_dir || null;
+  var currArrowHtml = currDir ? svgArrowLarge(compassToDeg(currDir)) : '<span style="font-size:20px; opacity:0.4;">—</span>';
+
+  var tempC = current.temp_c != null ? current.temp_c : null;
+  var feelsC = current.feels_like_c != null ? current.feels_like_c : null;
+  var conditionText = current.condition || "-";
+
+  // Tide direction: next event tells us if we're incoming (→ High) or outgoing (→ Low)
+  var tides = (dayData && dayData.tides) ? dayData.tides : [];
+  var tomorrowTides = (dayData && dayData.tides_tomorrow_model) ? dayData.tides_tomorrow_model : [];
+  var nextTide = findNextTideEvent(tides, 0);
+  if (!nextTide) nextTide = findNextTideEvent(tomorrowTides, 1);
+
+  var tideChipHtml = "";
+  if (nextTide) {
+    var isIncoming = nextTide.type === "High";
+    var tideArrow = isIncoming ? "↑" : "↓";
+    var tideDirectionWord = isIncoming ? "INCOMING" : "OUTGOING";
+    var tideLabel = nextTide.type === "High" ? "High water" : "Low water";
+    tideChipHtml =
+      '<div class="today-chip-top" style="font-size:12px; font-weight:800; color:rgba(232,238,247,0.92);">' +
+        tideArrow + " " + tideDirectionWord +
+      "</div>" +
+      '<div class="muted small" style="margin-top:6px; text-align:center; font-size:11px;">' +
+        tideLabel + " in " + formatMins(nextTide.mins) +
+      "</div>";
+  } else {
+    tideChipHtml = '<div class="today-chip-top">Tide data unavailable</div>';
+  }
+
+  var timeLabel = current.time ? "As of " + current.time : "";
+
+  condCard.style.display = "";
+  condCard.classList.remove("tone-excellent", "tone-good", "tone-ok", "tone-poor", "tone-avoid");
+  if (toneClass) condCard.classList.add(toneClass);
+
+  condCard.innerHTML =
+    // Header: title + score pill
+    '<div class="row" style="margin-bottom:2px;">' +
+    '  <div>' +
+    '    <div class="today-title" style="font-size:22px; margin-bottom:2px;">Current Conditions</div>' +
+    '    <div class="muted small">' + timeLabel + "</div>" +
+    "  </div>" +
+    '  <div class="pill ' + pillClass(score) + '" style="font-size:13px; padding:6px 12px; white-space:nowrap;">' +
+         (score != null ? score + " &middot; " + ratingWord : "—") +
+    "  </div>" +
+    "</div>" +
+
+    '<div class="spacer today-spacer-tight"></div>' +
+
+    // 3-col: Wind | Current | Temp
+    '<div class="cond-grid-3">' +
+
+    // Wind chip
+    '<div class="today-chip">' +
+    '  <div class="today-chip-top">' + svgWind() + "WIND</div>" +
+    '  <div style="margin:6px 0 4px;">' + windArrowHtml + "</div>" +
+    '  <div class="today-chip-value" style="flex-direction:column; gap:1px;">' +
+    '    <span class="today-chip-main">' + windKts + " kts</span>" +
+    '    <span class="today-chip-sub">' + windDir + "</span>" +
+    "  </div>" +
+    "</div>" +
+
+    // Current chip
+    '<div class="today-chip">' +
+    '  <div class="today-chip-top">' + svgCurrentIcon() + "CURRENT</div>" +
+    '  <div style="margin:6px 0 4px;">' + currArrowHtml + "</div>" +
+    '  <div class="today-chip-value" style="flex-direction:column; gap:1px;">' +
+    '    <span class="today-chip-main">' + (currKts != null ? currKts + " kts" : "—") + "</span>" +
+    '    <span class="today-chip-sub">' + (currDir || "—") + "</span>" +
+    "  </div>" +
+    "</div>" +
+
+    // Temp chip
+    '<div class="today-chip">' +
+    '  <div class="today-chip-top">' + svgThermometer() + "TEMP</div>" +
+    '  <div style="height:34px; display:flex; align-items:center; justify-content:center;">' +
+    '    <span class="today-chip-main" style="font-size:20px;">' + (tempC != null ? tempC + "&deg;C" : "—") + "</span>" +
+    "  </div>" +
+    '  <div class="today-chip-feels" style="text-align:center;">' +
+         (feelsC != null ? "feels " + feelsC + "&deg;C" : "") +
+    "  </div>" +
+    "</div>" +
+
+    "</div>" + // cond-grid-3
+
+    '<div class="spacer today-spacer-tight"></div>' +
+
+    // 2-col: Condition | Tide
+    '<div class="cond-grid-2">' +
+
+    // Condition chip
+    '<div class="today-chip today-chip--cond">' +
+    '  <div class="today-chip-cond">' +
+         svgWeatherFromText(conditionText) +
+    '    <span>' + String(conditionText).toLowerCase() + "</span>" +
+    "  </div>" +
+    "</div>" +
+
+    // Tide chip
+    '<div class="today-chip" style="text-align:center;">' +
+       tideChipHtml +
+    "</div>" +
+
+    "</div>"; // cond-grid-2
 }
 
 /* ---------------------------------------------
@@ -1129,6 +1286,9 @@ async function main() {
     if (label) label.textContent = "Set location";
 
     // Hide content sections
+    const condCard = document.getElementById("condCard");
+    if (condCard) condCard.style.display = "none";
+
     const tideCard = document.getElementById("tideCard");
     if (tideCard) tideCard.style.display = "none";
 
@@ -1147,6 +1307,9 @@ async function main() {
   }
 
   // Location exists: ensure the main UI is visible (in case we hid it previously)
+  const condCard = document.getElementById("condCard");
+  if (condCard) condCard.style.display = "";
+
   const tideCard = document.getElementById("tideCard");
   if (tideCard) tideCard.style.display = "";
 
@@ -1160,6 +1323,7 @@ async function main() {
   try {
     var todayIso = todayIsoLondon();
     var todayData = await getDayData(loc.slug, todayIso);
+    renderCurrentConditionsCard(todayData);
     renderTodayTidesCard(todayData);
   } catch (e) {
     setHtml(

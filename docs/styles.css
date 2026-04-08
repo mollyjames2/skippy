@@ -144,6 +144,18 @@ h2 { font-size: 16px; }
   gap: 10px;
 }
 
+.cond-grid-3 {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 8px;
+}
+
+.cond-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
 .tile {
   position: relative;
   background: linear-gradient(
