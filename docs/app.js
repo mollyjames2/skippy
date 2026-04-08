@@ -388,6 +388,15 @@ function svgWave() {
   );
 }
 
+function svgVisibility() {
+  return svgIconWrap(
+    '<svg viewBox="0 0 24 24" width="16" height="16" aria-hidden="true" focusable="false">' +
+      '<path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>' +
+      '<circle cx="12" cy="12" r="3" fill="none" stroke="currentColor" stroke-width="2"/>' +
+    "</svg>"
+  );
+}
+
 function svgArrowRotated(compassDeg) {
   if (compassDeg == null || !isFinite(Number(compassDeg))) return "";
 
@@ -555,7 +564,10 @@ function renderCurrentConditionsCard(dayData) {
   var feelsC = current.feels_like_c != null ? current.feels_like_c : null;
   var conditionText = current.condition || "-";
 
-  // Tide direction: next event tells us if we're incoming (→ High) or outgoing (→ Low)
+  var waveM = current.wave_m != null ? current.wave_m : null;
+  var visKm = current.visibility_km != null ? current.visibility_km : null;
+
+  // Tide direction: next event tells us if flooding (→ High) or ebbing (→ Low)
   var tides = (dayData && dayData.tides) ? dayData.tides : [];
   var tomorrowTides = (dayData && dayData.tides_tomorrow_model) ? dayData.tides_tomorrow_model : [];
   var nextTide = findNextTideEvent(tides, 0);
@@ -565,7 +577,7 @@ function renderCurrentConditionsCard(dayData) {
   if (nextTide) {
     var isIncoming = nextTide.type === "High";
     var tideArrow = isIncoming ? "↑" : "↓";
-    var tideDirectionWord = isIncoming ? "INCOMING" : "OUTGOING";
+    var tideDirectionWord = isIncoming ? "TIDE FLOODING" : "TIDE EBBING";
     var tideLabel = nextTide.type === "High" ? "High water" : "Low water";
     tideChipHtml =
       '<div class="today-chip-top" style="font-size:12px; font-weight:800; color:rgba(232,238,247,0.92);">' +
@@ -585,14 +597,20 @@ function renderCurrentConditionsCard(dayData) {
   if (toneClass) condCard.classList.add(toneClass);
 
   condCard.innerHTML =
-    // Header: title + score pill
-    '<div class="row" style="margin-bottom:2px;">' +
-    '  <div>' +
-    '    <div class="today-title" style="font-size:22px; margin-bottom:2px;">Current Conditions</div>' +
+    // Header: title on left, circular score on right
+    '<div class="today-grid">' +
+    '  <div class="today-left">' +
+    '    <div class="today-title">Current Conditions</div>' +
     '    <div class="muted small">' + timeLabel + "</div>" +
     "  </div>" +
-    '  <div class="pill ' + pillClass(score) + '" style="font-size:13px; padding:6px 12px; white-space:nowrap;">' +
-         (score != null ? score + " &middot; " + ratingWord : "—") +
+    '  <div class="today-score-wrap">' +
+    '    <div class="today-score-stack">' +
+    '      <div class="today-score-label">Score</div>' +
+    '      <div class="today-score-word">' + ratingWord + "</div>" +
+    '      <div class="today-score-circle ' + toneClass + '">' +
+    '        <div class="today-score-num">' + (score != null ? score : "—") + "</div>" +
+    "      </div>" +
+    "    </div>" +
     "  </div>" +
     "</div>" +
 
@@ -636,7 +654,7 @@ function renderCurrentConditionsCard(dayData) {
 
     '<div class="spacer today-spacer-tight"></div>' +
 
-    // 2-col: Condition | Tide
+    // 2-col: Condition | Wave
     '<div class="cond-grid-2">' +
 
     // Condition chip
@@ -647,12 +665,49 @@ function renderCurrentConditionsCard(dayData) {
     "  </div>" +
     "</div>" +
 
+    // Wave chip
+    '<div class="today-chip">' +
+    '  <div class="today-chip-top">' + svgWave() + "WAVES</div>" +
+    '  <div class="today-chip-value">' +
+    '    <span class="today-chip-main">' + (waveM != null ? waveM + "m" : "—") + "</span>" +
+    "  </div>" +
+    "</div>" +
+
+    "</div>" + // cond-grid-2
+
+    '<div class="spacer today-spacer-tight"></div>' +
+
+    // 2-col: Visibility | Tide
+    '<div class="cond-grid-2">' +
+
+    // Visibility chip
+    '<div class="today-chip">' +
+    '  <div class="today-chip-top">' + svgVisibility() + "VISIBILITY</div>" +
+    '  <div class="today-chip-value">' +
+    '    <span class="today-chip-main">' + (visKm != null ? visKm + "km" : "—") + "</span>" +
+    "  </div>" +
+    "</div>" +
+
     // Tide chip
     '<div class="today-chip" style="text-align:center;">' +
        tideChipHtml +
     "</div>" +
 
     "</div>"; // cond-grid-2
+
+  // Wire click → day summary
+  if (!condCard.dataset.daylinkWired) {
+    condCard.dataset.daylinkWired = "1";
+    condCard.style.cursor = "pointer";
+    condCard.addEventListener("click", function (e) {
+      if (e && e.target) {
+        var a = e.target.closest ? e.target.closest("a") : null;
+        if (a) return;
+      }
+      var date = (dayData && dayData.date) ? dayData.date : todayIsoLondon();
+      window.location.href = "./today.html?date=" + encodeURIComponent(date);
+    });
+  }
 }
 
 /* ---------------------------------------------

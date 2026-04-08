@@ -1754,10 +1754,13 @@ function fmtVal(x, suffix) {
   return String(x) + (suffix || "");
 }
 
-function fmtDir(deg, variable) {
+function fmtDir(deg, variable, alreadyToward) {
   if (deg == null || !isFinite(Number(deg))) return "—";
   var c = degToCompass16(deg) || "";
-  var arrow = svgArrowRotated((Number(deg) + 180) % 360); // show "to" direction similar to wind arrow approach
+  // Wind/wave/swell dirs are "FROM" convention → add 180° to show where they travel.
+  // Ocean current direction is "TOWARD" convention (Open-Meteo) → no flip needed.
+  var arrowDeg = alreadyToward ? Number(deg) : (Number(deg) + 180) % 360;
+  var arrow = svgArrowRotated(arrowDeg);
   return (
     '<span>' + c + "</span>" +
     arrow +
@@ -1806,7 +1809,7 @@ function renderExtendedGrid(snap, opts) {
   html += renderKVRow(svgWave() + "Swell dir", fmtDir(now.swell_dir_deg, snap.swDirVar), fmtDir(avg.swell_dir_deg, snap.swDirVar), showAverages);
 
   html += renderKVRow("Current", fmtVal(now.current_kts, " kts"), fmtVal(avg.current_kts, " kts"), showAverages);
-  html += renderKVRow("Current dir", fmtDir(now.current_dir_deg, snap.curDirVar), fmtDir(avg.current_dir_deg, snap.curDirVar), showAverages);
+  html += renderKVRow("Current dir", fmtDir(now.current_dir_deg, snap.curDirVar, true), fmtDir(avg.current_dir_deg, snap.curDirVar, true), showAverages);
   html += renderKVRow("Sea temp", fmtVal(now.sea_temp_c, "°C"), fmtVal(avg.sea_temp_c, "°C"), showAverages);
 
   return html;
